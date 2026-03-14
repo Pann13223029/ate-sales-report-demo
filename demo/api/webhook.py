@@ -37,12 +37,13 @@ BKK_TZ = timezone(timedelta(hours=7))
 SYSTEM_PROMPT = """You are a sales report data extraction assistant for ATE (Advanced Technology Equipment Co., Ltd.), a Thai B2B distributor of industrial equipment.
 
 ATE distributes the following brands:
-- Megger — electrical testing equipment (insulation testers, cable fault locators, transformer testers like MTO330, MIT525, MTO300)
-- Fluke — electronic test tools (digital multimeters, thermal imagers, power quality analyzers like 1587 FC, 1770, 87V)
-- CRC — industrial chemicals (contact cleaners like 2-26, lubricants, degreasers, corrosion inhibitors)
-- Salisbury — electrical safety equipment (insulating gloves, arc flash protection, hot sticks)
-- SmartWasher — parts washing systems (bioremediating parts washers, OzzyJuice)
-- IK Sprayer — industrial sprayers (pressure sprayers, foam sprayers)
+- Megger — electrical testing equipment (insulation testers, cable fault locators, transformer testers like MTO330, MIT525, MTO300, DLRO200, S1-1568)
+- Fluke — electronic test tools (digital multimeters, thermal imagers, power quality analyzers like 1587 FC, 1770, 87V, Ti480 PRO, 435-II)
+- CRC — industrial chemicals (contact cleaners like 2-26, Lectra Clean, lubricants, degreasers, Rust Remover)
+- Salisbury — electrical safety equipment (insulating gloves, arc flash protection kits, hot sticks)
+- SmartWasher — parts washing systems (bioremediating parts washers SW-28, OzzyJuice)
+- IK Sprayer — industrial sprayers (pressure sprayers Pro 12, foam sprayers)
+- HVOP (KATO tech) — high voltage operating products
 
 Analyze the LINE message from a field sales rep and extract structured data.
 
@@ -51,8 +52,12 @@ RULES:
 2. If the message is NOT sales-related (casual chat, jokes, lunch plans), return is_sales_report: false.
 3. Extract all fields you can identify. Use null for missing fields. NEVER fabricate data.
 4. Parse Thai currency: "150K"=150000, "1.5ล้าน"=1500000, "แสนห้า"=150000, "สองแสน"=200000.
-5. Generate a Thai confirmation message (confirmation_th) to send back to the rep.
-6. If the message is ambiguous, ask for clarification in the confirmation message.
+5. Parse Thai dates: "อังคารหน้า"=next Tuesday, "สัปดาห์หน้า"=next week, "25 มี.ค."=March 25. Output dates as YYYY-MM-DD.
+6. Generate a Thai confirmation message (confirmation_th) to send back to the rep.
+7. If the message is ambiguous, ask for clarification in the confirmation message.
+8. For activity_type "sent_to_service" (warranty/repair), leave sales_stage as null.
+9. If the rep mentions another person accompanying them (e.g. "กับน้องใหม่", "พาฝึกงาน", "ไปด้วยกัน"), extract accompanying_rep name and set is_training to true.
+10. For closed deals (closed_won, closed_lost, job_expired, equipment_defect), extract close_reason: why won (discount given?), why lost (price? competitor?), why expired, or what defect occurred.
 
 Return ONLY valid JSON matching this schema:
 {
@@ -61,13 +66,19 @@ Return ONLY valid JSON matching this schema:
     {
       "customer_name": "string or null",
       "contact_person": "string or null",
-      "product_brand": "Megger|Fluke|CRC|Salisbury|SmartWasher|IK Sprayer|Other|null",
+      "contact_channel": "phone|email|visit|null",
+      "product_brand": "Megger|Fluke|CRC|Salisbury|SmartWasher|IK Sprayer|HVOP|Other|null",
       "product_name": "string or null",
       "quantity": number or null,
       "deal_value_thb": number or null,
-      "activity_type": "visit|call|quotation|follow_up|closed_won|closed_lost|other",
-      "sales_stage": "lead|negotiation|quotation_sent|closed_won|closed_lost|null",
-      "payment_status": "pending|partial|paid|null",
+      "activity_type": "visit|call|quotation|follow_up|closed_won|closed_lost|sent_to_service|other",
+      "sales_stage": "lead|plan_to_visit|visited|negotiation|quotation_sent|bidding|closed_won|closed_lost|job_expired|equipment_defect|null",
+      "payment_status": "pending|deposit|paid|null",
+      "planned_visit_date": "YYYY-MM-DD or null — date of planned future visit",
+      "bidding_date": "YYYY-MM-DD or null — government bid submission deadline",
+      "accompanying_rep": "string or null — name of 2nd rep if mentioned",
+      "is_training": "boolean or null — true if accompanying rep is a trainee",
+      "close_reason": "string or null — reason for close/loss/expiry/defect, only for terminal stages",
       "follow_up_notes": "string or null",
       "summary_en": "string — brief English summary under 100 chars"
     }
@@ -80,27 +91,35 @@ If is_sales_report is false, return: {"is_sales_report": false, "activities": []
 FEW_SHOT_EXAMPLES = [
     {
         "input": "ไปเยี่ยม PTT วันนี้ เสนอ Megger MTO330 ราคา 150,000",
-        "output": '{"is_sales_report":true,"activities":[{"customer_name":"PTT","contact_person":null,"product_brand":"Megger","product_name":"MTO330","quantity":null,"deal_value_thb":150000,"activity_type":"visit","sales_stage":"quotation_sent","payment_status":null,"follow_up_notes":null,"summary_en":"Visited PTT, quoted Megger MTO330 at 150K THB"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- เข้าพบลูกค้า: PTT\\n- สินค้า: Megger MTO330\\n- มูลค่า: ฿150,000\\n- สถานะ: เสนอราคาแล้ว"}'
+        "output": '{"is_sales_report":true,"activities":[{"customer_name":"PTT","contact_person":null,"contact_channel":"visit","product_brand":"Megger","product_name":"MTO330","quantity":null,"deal_value_thb":150000,"activity_type":"visit","sales_stage":"quotation_sent","payment_status":null,"planned_visit_date":null,"bidding_date":null,"accompanying_rep":null,"is_training":null,"close_reason":null,"follow_up_notes":null,"summary_en":"Visited PTT, quoted Megger MTO330 at 150K THB"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- เข้าพบลูกค้า: PTT\\n- สินค้า: Megger MTO330\\n- มูลค่า: ฿150,000\\n- สถานะ: เสนอราคาแล้ว"}'
     },
     {
-        "input": "ปิดดีล Fluke 1770 กับ EGAT แล้ว 450K จ่ายแล้ว 50%",
-        "output": '{"is_sales_report":true,"activities":[{"customer_name":"EGAT","contact_person":null,"product_brand":"Fluke","product_name":"1770","quantity":null,"deal_value_thb":450000,"activity_type":"closed_won","sales_stage":"closed_won","payment_status":"partial","follow_up_notes":"Customer paid 50% (225,000 THB); remaining 50% pending","summary_en":"Closed Fluke 1770 deal with EGAT, 450K THB, 50% paid"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- ปิดการขายสำเร็จ: EGAT\\n- สินค้า: Fluke 1770\\n- มูลค่า: ฿450,000\\n- ชำระแล้ว: 50%\\n\\nยินดีด้วยครับ! 🎉"}'
+        "input": "ปิดดีล Fluke 1770 กับ EGAT แล้ว 450K วางมัดจำ 50%",
+        "output": '{"is_sales_report":true,"activities":[{"customer_name":"EGAT","contact_person":null,"contact_channel":"visit","product_brand":"Fluke","product_name":"1770","quantity":null,"deal_value_thb":450000,"activity_type":"closed_won","sales_stage":"closed_won","payment_status":"deposit","planned_visit_date":null,"bidding_date":null,"accompanying_rep":null,"is_training":null,"close_reason":"ปิดดีลได้ตามราคาเสนอ ลูกค้าวางมัดจำ 50%","follow_up_notes":"Customer paid 50% deposit (225,000 THB); remaining 50% pending","summary_en":"Closed Fluke 1770 deal with EGAT, 450K THB, 50% deposit"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- ปิดการขายสำเร็จ: EGAT\\n- สินค้า: Fluke 1770\\n- มูลค่า: ฿450,000\\n- วางมัดจำ: 50%\\n\\nยินดีด้วยครับ! 🎉"}'
     },
     {
         "input": "ลูกค้า SCG โทรมา สนใจ CRC contact cleaner 20 กระป๋อง",
-        "output": '{"is_sales_report":true,"activities":[{"customer_name":"SCG","contact_person":null,"product_brand":"CRC","product_name":"Contact Cleaner","quantity":20,"deal_value_thb":null,"activity_type":"call","sales_stage":"lead","payment_status":null,"follow_up_notes":"Customer called expressing interest in 20 cans","summary_en":"SCG called, interested in CRC Contact Cleaner x20"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- ลูกค้าโทรเข้ามา: SCG\\n- สินค้า: CRC Contact Cleaner\\n- จำนวน: 20 กระป๋อง\\n- สถานะ: ลูกค้าสนใจ (Lead)"}'
+        "output": '{"is_sales_report":true,"activities":[{"customer_name":"SCG","contact_person":null,"contact_channel":"phone","product_brand":"CRC","product_name":"Contact Cleaner","quantity":20,"deal_value_thb":null,"activity_type":"call","sales_stage":"lead","payment_status":null,"planned_visit_date":null,"bidding_date":null,"accompanying_rep":null,"is_training":null,"close_reason":null,"follow_up_notes":"Customer called expressing interest in 20 cans","summary_en":"SCG called, interested in CRC Contact Cleaner x20"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- ลูกค้าโทรเข้ามา: SCG\\n- สินค้า: CRC Contact Cleaner\\n- จำนวน: 20 กระป๋อง\\n- สถานะ: ลูกค้าสนใจ (Lead)"}'
     },
     {
         "input": "ใครจะไปกินข้าวเที่ยงมั่ง",
         "output": '{"is_sales_report":false,"activities":[],"confirmation_th":null}'
     },
     {
-        "input": "วันนี้ไปเยี่ยม 2 ที่\n1. IRPC เจอคุณสมชาย เสนอ Megger MIT525 ราคา 280,000\n2. Thai Oil follow up เรื่อง CRC น้ำยาทำความสะอาด 50 แกลลอน ราคา 85,000",
-        "output": '{"is_sales_report":true,"activities":[{"customer_name":"IRPC","contact_person":"คุณสมชาย","product_brand":"Megger","product_name":"MIT525","quantity":null,"deal_value_thb":280000,"activity_type":"visit","sales_stage":"negotiation","payment_status":null,"follow_up_notes":"Customer very interested, sent quotation","summary_en":"Visited IRPC, presented Megger MIT525 at 280K THB"},{"customer_name":"Thai Oil","contact_person":null,"product_brand":"CRC","product_name":"Cleaning Solution","quantity":50,"deal_value_thb":85000,"activity_type":"follow_up","sales_stage":"negotiation","payment_status":null,"follow_up_notes":"Following up on CRC cleaning solution, 50 gallons","summary_en":"Follow-up at Thai Oil on CRC cleaner 50gal, 85K THB"}],"confirmation_th":"รับทราบครับ บันทึก 2 รายการแล้ว:\\n\\n1. เข้าพบ IRPC (คุณสมชาย)\\n   - Megger MIT525 ฿280,000\\n   - สถานะ: กำลังเจรจา\\n\\n2. Follow up Thai Oil\\n   - CRC น้ำยาทำความสะอาด x50 แกลลอน ฿85,000\\n   - สถานะ: กำลังเจรจา"}'
+        "input": "จะไปเยี่ยม IRPC อังคารหน้า เรื่อง Megger MIT525 พาน้องใหม่สมชายไปด้วย",
+        "output": '{"is_sales_report":true,"activities":[{"customer_name":"IRPC","contact_person":null,"contact_channel":"visit","product_brand":"Megger","product_name":"MIT525","quantity":null,"deal_value_thb":null,"activity_type":"visit","sales_stage":"plan_to_visit","payment_status":null,"planned_visit_date":"2026-03-17","bidding_date":null,"accompanying_rep":"สมชาย","is_training":true,"close_reason":null,"follow_up_notes":"Planned visit next Tuesday with trainee","summary_en":"Planning to visit IRPC next Tue for Megger MIT525, with trainee"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- นัดเข้าพบ: IRPC (อังคารหน้า)\\n- สินค้า: Megger MIT525\\n- ไปกับ: สมชาย (ฝึกงาน)\\n- สถานะ: นัดเข้าพบ"}'
     },
     {
         "input": "เสียงาน Salisbury ถุงมือกันไฟฟ้าที่ กฟภ. แพ้ราคาเจ้าอื่น มูลค่า 320,000",
-        "output": '{"is_sales_report":true,"activities":[{"customer_name":"กฟภ. (PEA)","contact_person":null,"product_brand":"Salisbury","product_name":"Insulating Gloves","quantity":null,"deal_value_thb":320000,"activity_type":"closed_lost","sales_stage":"closed_lost","payment_status":null,"follow_up_notes":"Lost on price — competitor was cheaper","summary_en":"Lost Salisbury gloves deal at PEA, 320K, undercut on price"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- เสียงาน: กฟภ.\\n- สินค้า: Salisbury ถุงมือกันไฟฟ้า\\n- มูลค่า: ฿320,000\\n- สาเหตุ: แพ้ราคา\\n\\nไม่เป็นไรครับ ครั้งหน้าจะได้แน่นอน 💪"}'
+        "output": '{"is_sales_report":true,"activities":[{"customer_name":"กฟภ. (PEA)","contact_person":null,"contact_channel":"visit","product_brand":"Salisbury","product_name":"Insulating Gloves","quantity":null,"deal_value_thb":320000,"activity_type":"closed_lost","sales_stage":"closed_lost","payment_status":null,"planned_visit_date":null,"bidding_date":null,"accompanying_rep":null,"is_training":null,"close_reason":"แพ้ราคาคู่แข่ง ราคาถูกกว่า","follow_up_notes":"Lost on price — competitor was cheaper","summary_en":"Lost Salisbury gloves deal at PEA, 320K, undercut on price"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- เสียงาน: กฟภ.\\n- สินค้า: Salisbury ถุงมือกันไฟฟ้า\\n- มูลค่า: ฿320,000\\n- สาเหตุ: แพ้ราคา\\n\\nไม่เป็นไรครับ ครั้งหน้าจะได้แน่นอน 💪"}'
+    },
+    {
+        "input": "ส่ง Megger MTO330 เครื่องของ PTT เข้าซ่อม warranty",
+        "output": '{"is_sales_report":true,"activities":[{"customer_name":"PTT","contact_person":null,"contact_channel":null,"product_brand":"Megger","product_name":"MTO330","quantity":1,"deal_value_thb":null,"activity_type":"sent_to_service","sales_stage":null,"payment_status":null,"planned_visit_date":null,"bidding_date":null,"accompanying_rep":null,"is_training":null,"close_reason":null,"follow_up_notes":"Sent unit for warranty repair","summary_en":"Sent PTT Megger MTO330 for warranty service"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- ส่งซ่อม warranty: PTT\\n- สินค้า: Megger MTO330\\n- สถานะ: ส่งเข้าศูนย์บริการ"}'
+    },
+    {
+        "input": "ยื่นซองประมูลงาน กฟภ. Megger MIT525 3 เครื่อง 2.1 ล้าน กำหนดเปิดซอง 25 มี.ค.",
+        "output": '{"is_sales_report":true,"activities":[{"customer_name":"กฟภ. (PEA)","contact_person":null,"contact_channel":null,"product_brand":"Megger","product_name":"MIT525","quantity":3,"deal_value_thb":2100000,"activity_type":"quotation","sales_stage":"bidding","payment_status":null,"planned_visit_date":null,"bidding_date":"2026-03-25","accompanying_rep":null,"is_training":null,"close_reason":null,"follow_up_notes":"Government bid submitted, opening date March 25","summary_en":"Submitted bid for 3x Megger MIT525 at PEA, 2.1M THB, opens Mar 25"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- ยื่นประมูล: กฟภ.\\n- สินค้า: Megger MIT525 x3\\n- มูลค่า: ฿2,100,000\\n- เปิดซอง: 25 มี.ค. 2569"}'
     }
 ]
 
@@ -230,6 +249,9 @@ MANDATORY_FIELDS = {
     "sales_stage": "สถานะดีล",
 }
 
+# Fields exempt from mandatory check (service entries don't need sales_stage/deal_value)
+SERVICE_ACTIVITY_TYPES = {"sent_to_service"}
+
 EXAMPLE_MESSAGE = "ตัวอย่าง: ไปเยี่ยม PTT เสนอ Megger MTO330 ราคา 150,000 สถานะเจรจา"
 
 
@@ -242,6 +264,9 @@ def build_nudge_confirmation(parsed: dict, ai_confirmation: str) -> str:
     # Check missing fields across all activities
     all_missing = []
     for activity in activities:
+        # Skip mandatory check for service entries
+        if activity.get("activity_type") in SERVICE_ACTIVITY_TYPES:
+            continue
         for field_key, field_label in MANDATORY_FIELDS.items():
             val = activity.get(field_key)
             if val is None or val == "":
@@ -294,19 +319,21 @@ HELP_RESPONSE = """📝 วิธีรายงานการขาย
 ตัวอย่าง:
 • ไปเยี่ยม PTT เสนอ Megger MTO330 ราคา 150,000 สถานะเจรจา
 • โทรคุย EGAT เรื่อง Fluke 1770 ลูกค้าสนใจ งบ 520,000
-• ปิดดีล SCG Salisbury ถุงมือ 15 ชุด 975,000 จ่ายแล้ว 50%
+• ปิดดีล SCG Salisbury ถุงมือ 15 ชุด 975,000 วางมัดจำ 50%
+• จะไปเยี่ยม IRPC อังคารหน้า เรื่อง Megger MIT525
+• ส่ง Megger MTO330 ของ PTT เข้าซ่อม warranty
+• ยื่นซองประมูล กฟภ. Megger MIT525 2.1 ล้าน เปิดซอง 25 มี.ค.
 
-รายงานหลายรายการในข้อความเดียวก็ได้:
-• เข้าพบ PTTEP วันนี้
-  1. เสนอ Megger MIT1025 ราคา 350,000
-  2. เสนอ Fluke 87V 3 ตัว ราคา 42,000
+อัพเดทดีลเดิม:
+• พิมพ์: อัพเดท MSG-XXXXX แล้วตามด้วยข้อมูลใหม่
+• ระบบจะอัพเดทแทนการสร้างรายการใหม่
 
 ข้อมูลสำคัญ 5 อย่าง:
 ✅ ชื่อลูกค้า
 ✅ สินค้า/แบรนด์
 ✅ มูลค่าดีล
-✅ ประเภทกิจกรรม (เยี่ยม/โทร/เสนอราคา/ปิดดีล)
-✅ สถานะดีล (สนใจ/เจรจา/ส่ง QT/ปิดได้/เสียงาน)"""
+✅ ประเภทกิจกรรม (เยี่ยม/โทร/เสนอราคา/ปิดดีล/ส่งซ่อม)
+✅ สถานะดีล (สนใจ/นัดเยี่ยม/เจรจา/ส่ง QT/ประมูล/ปิดได้/เสียงาน)"""
 
 
 def generate_summary(reply_token: str):
@@ -414,10 +441,11 @@ Format for LINE chat (plain text, no markdown).
 
 LIVE_DATA_HEADERS = [
     "Timestamp", "Rep Name", "Customer", "Contact Person",
-    "Product Brand", "Product Name", "Quantity", "Deal Value (THB)",
-    "Activity Type", "Sales Stage", "Payment Status",
-    "Follow-up Notes", "Summary (EN)", "Raw Message",
-    "Batch ID", "Item #", "Source"
+    "Contact Channel", "Product Brand", "Product Name", "Quantity",
+    "Deal Value (THB)", "Activity Type", "Sales Stage", "Payment Status",
+    "Planned Visit Date", "Bidding Date", "Accompanying Rep", "Training Flag",
+    "Close Reason", "Follow-up Notes", "Summary (EN)", "Raw Message",
+    "Batch ID", "Item #", "Source", "Manager Notes"
 ]
 
 
@@ -427,8 +455,8 @@ def get_or_create_live_tab(spreadsheet):
     try:
         return spreadsheet.worksheet("Live Data")
     except gspread.exceptions.WorksheetNotFound:
-        live_sheet = spreadsheet.add_worksheet(title="Live Data", rows=500, cols=17)
-        live_sheet.update(range_name="A1:Q1", values=[LIVE_DATA_HEADERS])
+        live_sheet = spreadsheet.add_worksheet(title="Live Data", rows=500, cols=24)
+        live_sheet.update(range_name="A1:X1", values=[LIVE_DATA_HEADERS])
         # Bold header
         spreadsheet.batch_update({"requests": [{
             "repeatCell": {
@@ -466,11 +494,14 @@ def append_to_sheets(parsed: dict, rep_name: str, raw_message: str):
     rows = []
     for i, activity in enumerate(activities, 1):
         item_label = f"{i}/{total}" if total > 1 else ""
+        is_training = activity.get("is_training")
+        training_flag = "yes" if is_training else ""
         row = [
             now,
             rep_name,
             activity.get("customer_name", ""),
             activity.get("contact_person", ""),
+            activity.get("contact_channel", ""),
             activity.get("product_brand", ""),
             activity.get("product_name", ""),
             activity.get("quantity", ""),
@@ -478,12 +509,18 @@ def append_to_sheets(parsed: dict, rep_name: str, raw_message: str):
             activity.get("activity_type", ""),
             activity.get("sales_stage", ""),
             activity.get("payment_status", ""),
+            activity.get("planned_visit_date", ""),
+            activity.get("bidding_date", ""),
+            activity.get("accompanying_rep", ""),
+            training_flag,
+            activity.get("close_reason", ""),
             activity.get("follow_up_notes", ""),
             activity.get("summary_en", ""),
             raw_message,
             batch_id,
             item_label,
             "live",
+            "",  # Manager Notes (blank, manual only)
         ]
         rows.append(row)
 
