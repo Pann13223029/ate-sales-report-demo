@@ -1,3 +1,7 @@
+> **ARCHIVED:** This guide was part of the original planning phase. The final implementation uses Vercel serverless Python instead of n8n. Kept for reference in case n8n integration is needed in future phases. See `demo/README.md` for the current implementation.
+
+---
+
 # ATE Sales Report — n8n Workflow Configuration Guide
 
 > **Purpose:** Step-by-step instructions for building the n8n workflow that receives LINE messages, parses them with Claude AI, stores structured data in Google Sheets, and sends confirmations back to the LINE group.

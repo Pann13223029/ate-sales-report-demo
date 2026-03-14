@@ -19,6 +19,9 @@
 6. [FAQ in Thai](#6-faq-in-thai)
 7. [Manager Talking Points](#7-manager-talking-points)
 8. [Success Metrics](#8-success-metrics)
+9. [LINE Rich Menu](#9-line-rich-menu)
+10. [Nudge System](#10-nudge-system)
+11. [On-Demand Summary](#11-on-demand-summary)
 
 ---
 
@@ -417,6 +420,8 @@ This is the exact Thai text to pin in the LINE group using the "Note" feature. C
 สั้นก็ได้ → "ไป PTT Megger 150K" ✅
 
 📸 ส่งรูป QT / PO ได้ แนบข้อความด้วยนะ
+📊 พิมพ์ "สรุป" = ดูยอด pipeline ทันที
+📱 เมนูด้านล่าง: สรุปยอด | วิธีรายงาน | Dashboard | Sheets
 ❓ มีปัญหา ทักแอดมินได้เลย
 ```
 
@@ -481,7 +486,31 @@ This is the exact Thai text to pin in the LINE group using the "Note" feature. C
 
 ---
 
-**Q7: ถ้าไม่ได้เจอลูกค้า ทำงาน office / ประชุม / training ต้องส่งรายงานมั้ย?**
+**Q7: พิมพ์ "สรุป" หรือ "สรุปยอด" แล้วได้อะไร?**
+
+น้องบันทึกจะตอบกลับสรุป pipeline ทั้งทีม — ยอดรวม, จำนวนดีลแยกตามสถานะ (lead, quotation, negotiation, won, lost), แบรนด์ที่ขายดี, และจำนวนกิจกรรมเดือนนี้ ข้อมูล real-time จาก Google Sheets ครับ/ค่ะ หรือจะกดปุ่ม **สรุปยอด** ที่เมนูด้านล่างก็ได้เลย
+
+---
+
+**Q8: ถ้าข้อมูลไม่ครบ บอทจะว่ามั้ย?**
+
+ไม่ว่าครับ/ค่ะ! น้องบันทึกบันทึกให้ทุกข้อความ แม้ข้อมูลไม่ครบ แต่ถ้าขาดข้อมูลสำคัญ (เช่น ชื่อลูกค้า, แบรนด์สินค้า, มูลค่า) บอทจะ**แนะนำนิดหน่อย**แบบสุภาพ เช่น "ถ้าสะดวก บอกมูลค่าดีลด้วยนะครับ" ไม่บังคับ แค่ช่วยให้ dashboard ข้อมูลครบขึ้น
+
+---
+
+**Q9: เมนูด้านล่าง (Rich Menu) มีปุ่มอะไรบ้าง?**
+
+มี 4 ปุ่ม:
+- **สรุปยอด** — ดูสรุป pipeline ทันที
+- **วิธีรายงาน** — ดูตัวอย่างข้อความรายงาน
+- **เปิด Dashboard** — เปิด Looker Studio ดู dashboard
+- **เปิด Sheets** — เปิด Google Sheets ดูข้อมูลดิบ
+
+ถ้าเมนูหาย กดไอคอนแป้นพิมพ์ (⌨) ด้านล่างจอเพื่อสลับกลับมา
+
+---
+
+**Q10: ถ้าไม่ได้เจอลูกค้า ทำงาน office / ประชุม / training ต้องส่งรายงานมั้ย?**
 
 ไม่จำเป็นครับ/ค่ะ ระบบนี้เน้นเรื่องกิจกรรมการขาย (เข้าพบลูกค้า, โทร, เสนอราคา, ปิดดีล) เป็นหลัก ถ้าอยากรายงานงาน office หรือ training ก็ส่งมาได้ น้องบันทึกจะจดไว้ให้เหมือนกัน แต่ไม่ได้บังคับ
 
@@ -694,6 +723,118 @@ The manager's daily behavior in the first month matters more than any guide or t
 │                                    │  dashboard data to keep it relevant.   │
 └────────────────────────────────────┴────────────────────────────────────────┘
 ```
+
+---
+
+## 9. LINE Rich Menu
+
+The bot now has a **persistent Rich Menu** — a 4-button bar that appears at the bottom of the chat screen. Reps do not need to type commands; they can just tap.
+
+```
+┌─────────────────┬─────────────────┐
+│   สรุปยอด        │   วิธีรายงาน     │
+│  Monthly Summary │  How to Report  │
+├─────────────────┼─────────────────┤
+│  เปิด Dashboard  │   เปิด Sheets    │
+│  Open Looker     │  Open Google     │
+│  Studio          │  Sheets          │
+└─────────────────┴─────────────────┘
+```
+
+### Button Details
+
+| Button | Label | What It Does |
+|--------|-------|-------------|
+| Top-left | **สรุปยอด** (Monthly Summary) | Sends "สรุปยอด" keyword to the bot, which replies with a pipeline summary: total pipeline value, deals by stage, top brands, and recent activity count. |
+| Top-right | **วิธีรายงาน** (How to Report) | Sends "วิธีรายงาน" keyword to the bot, which replies with a quick-reference guide showing reporting examples (similar to Section 3B). |
+| Bottom-left | **เปิด Dashboard** | Opens the Looker Studio dashboard URL directly in the LINE in-app browser. Reps can view KPIs, pipeline charts, and activity feeds. |
+| Bottom-right | **เปิด Sheets** | Opens the Google Sheets spreadsheet directly. Useful for reps or managers who want to see raw data. |
+
+### Tips for Reps
+
+- The Rich Menu is always visible at the bottom of the chat. If it disappears, tap the keyboard icon (⌨) to toggle it back.
+- **สรุปยอด** is the quickest way to check your team's pipeline without leaving LINE.
+- **วิธีรายงาน** is a handy refresher — tap it anytime you forget how to format a message.
+
+---
+
+## 10. Nudge System
+
+The bot has a **gentle nudge system** to help reps submit more complete reports. When a message is missing key information, the bot will include a soft reminder in its reply.
+
+### How It Works
+
+The bot checks for **5 key fields** in every report:
+
+| # | Field | Example |
+|---|-------|---------|
+| 1 | Customer name | PTT, SCG, กฟผ. |
+| 2 | Product brand | Megger, Fluke, CRC, Salisbury, SmartWasher, IK Sprayer |
+| 3 | Deal value | 150K, 300,000, 1.5 ล้าน |
+| 4 | Activity type | เข้าพบ, โทร, เสนอราคา, ปิดดีล |
+| 5 | Sales stage | lead, quotation, negotiation, won, lost |
+
+### 3-Tier Nudge Behavior
+
+| Missing Fields | Bot Behavior |
+|----------------|-------------|
+| 0 fields missing | No nudge — the bot just confirms the entry normally. |
+| 1-2 fields missing | **Gentle hint** — the bot confirms the entry and adds a soft reminder, e.g., "ถ้าสะดวก บอกมูลค่าดีลด้วยนะครับ จะได้ขึ้น dashboard ครบ" |
+| 3+ fields missing | **Hint + example** — the bot confirms what it could parse, reminds about missing fields, and shows a short example message for reference. |
+
+### Key Design Principles
+
+- **Never blocks or rejects** a message — every report is accepted and recorded, even if incomplete.
+- **Soft/polite tone** — nudges always start with "ถ้าสะดวก" (if convenient), never demanding.
+- **Educational** — the example in tier 3 teaches reps what a complete message looks like, without feeling like a lecture.
+- **Non-repetitive** — once a rep consistently sends complete reports, they stop seeing nudges entirely.
+
+---
+
+## 11. On-Demand Summary
+
+Reps can request a **pipeline summary** anytime by typing a summary keyword in the chat.
+
+### Trigger Keywords
+
+Any of these will activate the summary:
+- **สรุป**
+- **สรุปยอด**
+- Or tap the **สรุปยอด** button on the Rich Menu (see Section 9)
+
+### What the Bot Returns
+
+The bot queries the current Google Sheets data and generates a Thai-language summary via Gemini AI, including:
+
+- Total pipeline value (฿)
+- Number of active deals by sales stage (lead, quotation, negotiation, won, lost)
+- Top product brands by value
+- Recent activity count (this month)
+- Notable wins or large deals in progress
+
+### Example Bot Response
+
+```
+📊 สรุป Pipeline ทีม ATE (มี.ค. 2569)
+
+💰 Pipeline รวม: ฿4,850,000
+📈 ดีลที่เปิดอยู่: 12 ดีล
+
+📋 แยกตามสถานะ:
+  • Lead: 4 ดีล (฿1,200,000)
+  • Quotation: 3 ดีล (฿1,500,000)
+  • Negotiation: 3 ดีล (฿1,350,000)
+  • Won: 2 ดีล (฿800,000)
+
+🏆 แบรนด์ที่ขายดี: Megger (฿2.1M), Fluke (฿1.5M)
+📌 กิจกรรมเดือนนี้: 28 รายการ
+```
+
+### Tips
+
+- Reps can check the summary before a client meeting to recall pipeline context.
+- The summary covers **the whole team's data**, not just the individual rep.
+- Summary data refreshes in real time — it reflects the latest entries in Google Sheets.
 
 ### Success Definition Summary
 

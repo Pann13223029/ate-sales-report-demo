@@ -1,6 +1,6 @@
 # ATE Sales Report System — Roadmap
 
-> **Last updated:** 2026-03-11
+> **Last updated:** 2026-03-14
 
 ---
 
@@ -60,10 +60,10 @@ Phone (LINE) → Vercel (Python) → Gemini AI → Google Sheets → Looker Stud
 
 ### P1 — Build Next (before full rollout)
 
-| # | Feature | Effort | Description |
-|---|---------|--------|-------------|
-| 1 | **Monthly Summary + On-demand** | 3 hrs | Auto-push on 1st of month + on-demand via "สรุป" keyword. Gemini generates natural Thai summary from pipeline data. Monthly cadence fits ATE's cyclical sales (industrial equipment, 2-6 month deal cycles). |
-| 2 | **LINE Rich Menu** | 2 hrs | 4-button persistent menu: สรุปยอด (summary), วิธีรายงาน (how to report), เปิด Dashboard (URL), เปิด Sheets (URL). Setup via API script + Pillow-generated image. |
+| # | Feature | Effort | Description | Status |
+|---|---------|--------|-------------|--------|
+| 1 | **Monthly Summary + On-demand** | 3 hrs | Auto-push on 1st of month + on-demand via "สรุป" keyword. Gemini generates natural Thai summary from pipeline data. Monthly cadence fits ATE's cyclical sales (industrial equipment, 2-6 month deal cycles). | **On-demand: DONE.** Monthly auto-push cron: pending. |
+| 2 | **LINE Rich Menu** | 2 hrs | 4-button persistent menu: สรุปยอด (summary), วิธีรายงาน (how to report), เปิด Dashboard (URL), เปิด Sheets (URL). Setup via API script + Pillow-generated image. | **DONE** |
 
 ### P2 — Enhance
 
@@ -95,11 +95,20 @@ Phone (LINE) → Vercel (Python) → Gemini AI → Google Sheets → Looker Stud
 
 ---
 
-## Demo Checklist (Friday Mar 14)
+## Demo Checklist (Friday Mar 14) -- TODAY IS DEMO DAY
 
-- [ ] Set Looker Studio data freshness to 1 minute
-- [ ] Share dashboard link (Anyone with link → Viewer)
-- [ ] Test full LINE → Sheets → Dashboard flow 5+ times
-- [ ] Bookmark Google Sheets URL as fallback
-- [ ] Prepare talking points for sales manager
-- [ ] Rehearse 7-minute demo script
+- [x] Set Looker Studio data freshness to 1 minute
+- [x] Share dashboard link (Anyone with link → Viewer)
+- [x] Test full LINE → Sheets → Dashboard flow 5+ times
+- [x] Bookmark Google Sheets URL as fallback
+- [x] Prepare talking points for sales manager
+- [ ] Rehearse 7-minute demo script (final run-through today)
+
+---
+
+## Changelog
+
+| Version | Date | Changes |
+|---------|------|---------|
+| v1.0 | 2026-03-11 | Core pipeline — LINE → Gemini → Sheets → Reply. Includes nudge system, batch IDs, sample data, Looker Studio dashboard, backup system, Live Data tab. |
+| v1.1 | 2026-03-11 | Rich Menu (4 buttons) + on-demand summary via "สรุป"/"สรุปยอด" keyword + roadmap document. |

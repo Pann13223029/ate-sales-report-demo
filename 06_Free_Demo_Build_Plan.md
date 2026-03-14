@@ -1,8 +1,10 @@
 # ATE Sales Report System — FREE Demo Build Plan
 
+> **Status: COMPLETED.** Demo built and deployed. See `demo/README.md` for setup instructions and `08_Roadmap.md` for Phase 2 plans.
+
 > **Purpose:** Build a live, zero-budget demo to show ATE's sales manager the full end-to-end flow
 > **Constraint:** 3 days, zero budget, all free tiers
-> **Date:** 2026-03-10
+> **Date:** 2026-03-10 (demo date: 2026-03-14)
 > **Method:** Expert panel debate → consensus recommendation
 
 ---
@@ -289,6 +291,8 @@ DATA FLOW (timeline for a single message):
 
 ## 5. 3-Day Build Plan
 
+> **Status: All 3 days completed.** System is live at ate-sales-demo.vercel.app
+
 ### Day 1 (8 hours): Core Pipeline — LINE to AI to Reply
 
 | Time | Task | Details | Done Criteria |
@@ -482,6 +486,8 @@ Follow up PTT เรื่อง Megger MTO330 ลูกค้าขอ demo ส
 ## 8. Pre-populated Sample Data
 
 These 20 entries should be loaded into Google Sheets **before** the demo. They represent two weeks of realistic ATE sales activity with real product names, real Thai customer names, and realistic deal values.
+
+> **Actual implementation note:** The final demo uses 31 sample rows (not 20 as planned here), with richer deal progression stories and batch ID grouping. See `demo/populate_sample_data.py`.
 
 ### Data Schema
 

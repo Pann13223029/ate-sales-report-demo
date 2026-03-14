@@ -1,7 +1,7 @@
 # LINE Official Account & Messaging API Setup Guide
 
 **Company:** ATE (Advanced Technology Equipment)
-**Purpose:** Receive messages from a LINE group via webhook (n8n integration)
+**Purpose:** Receive messages from a LINE group via webhook (Vercel serverless integration)
 **Date:** 2026-03-10
 
 ---
@@ -33,7 +33,7 @@ Follow each part in order. You can take breaks between parts — just bookmark w
   ╚═════════╝
 ```
 
-**Estimated time:** 30–45 minutes (first time) · 10 minutes (if you have done it before)
+**Estimated time:** 30-45 minutes (first time) / 10 minutes (if you have done it before)
 
 ---
 
@@ -45,7 +45,7 @@ Before we start, here is how all the pieces fit together once setup is complete:
  ┌──────────────────────────────────────────────────────────────────────┐
  │                         YOUR LINE GROUP                             │
  │                                                                     │
- │   👤 Salesperson A  ·  👤 Salesperson B  ·  🤖 ATE Sales Bot       │
+ │   Salesperson A  ·  Salesperson B  ·  ATE Sales Bot                 │
  │                                                                     │
  │   A salesperson types a message in the group...                     │
  └────────────────────────────────┬─────────────────────────────────────┘
@@ -64,12 +64,12 @@ Before we start, here is how all the pieces fit together once setup is complete:
                                   │
                                   ▼
  ┌──────────────────────────────────────────────────────────────────────┐
- │                YOUR n8n SERVER (webhook endpoint)                   │
+ │             YOUR VERCEL SERVER (webhook endpoint)                   │
  │                                                                     │
- │   https://your-n8n-domain.com/webhook/line-sales-report             │
+ │   https://your-project.vercel.app/api/webhook                       │
  │                                                                     │
- │   n8n receives the message, parses it, and processes the            │
- │   sales report data into your database / spreadsheet / etc.         │
+ │   Vercel receives the message, sends it to Gemini AI for parsing,   │
+ │   writes structured data to Google Sheets, and replies via LINE.    │
  └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -79,7 +79,7 @@ Before we start, here is how all the pieces fit together once setup is complete:
 
 - A LINE personal account (used to manage the Official Account)
 - Access to a computer (some settings are only available on desktop)
-- The webhook URL from n8n (can be added later)
+- Your Vercel webhook URL (can be added later — the format is `https://your-project.vercel.app/api/webhook`)
 
 ---
 
@@ -114,12 +114,12 @@ Here is a map of which settings live where:
  │  "BUSINESS" side                 │     │  "TECHNICAL" side                │
  │                                  │     │                                  │
  │  ┌────────────────────────────┐  │     │  ┌────────────────────────────┐  │
- │  │ ✦ Account name & profile  │  │     │  │ ✦ Channel Secret           │  │
- │  │ ✦ QR code                 │  │     │  │ ✦ Channel Access Token     │  │
- │  │ ✦ Auto-reply ON/OFF       │  │     │  │ ✦ Webhook URL              │  │
- │  │ ✦ Greeting message ON/OFF │  │     │  │ ✦ Webhook ON/OFF (again!)  │  │
- │  │ ✦ Response mode (Bot/Chat)│  │     │  │ ✦ Bot join groups setting  │  │
- │  │ ✦ Webhook ON/OFF          │  │     │  │ ✦ Provider management      │  │
+ │  │ Account name & profile    │  │     │  │ Channel Secret             │  │
+ │  │ QR code                   │  │     │  │ Channel Access Token       │  │
+ │  │ Auto-reply ON/OFF         │  │     │  │ Webhook URL                │  │
+ │  │ Greeting message ON/OFF   │  │     │  │ Webhook ON/OFF (again!)    │  │
+ │  │ Response mode (Bot/Chat)  │  │     │  │ Bot join groups setting    │  │
+ │  │ Webhook ON/OFF            │  │     │  │ Provider management        │  │
  │  └────────────────────────────┘  │     │  └────────────────────────────┘  │
  │                                  │     │                                  │
  │  You come here in:               │     │  You come here in:               │
@@ -137,7 +137,7 @@ Here is a map of which settings live where:
                   │  to manage it            │
                   └──────────────────────────┘
 
- ⚠  IMPORTANT: Webhook must be enabled in BOTH portals.
+ IMPORTANT: Webhook must be enabled in BOTH portals.
     If you only enable it in one, it will NOT work.
 ```
 
@@ -202,10 +202,10 @@ Here is a map of which settings live where:
   │  │              │  │              │  │              │  │
   │  │ Channel ID   │  │ Webhook URL  │  │ (not needed) │  │
   │  │ Channel      │  │ Bot info     │  │              │  │
-  │  │  secret  ◄───┼──┼── Part 4     │  │              │  │
+  │  │  secret  <───┼──┼── Part 4     │  │              │  │
   │  │              │  │ Access       │  │              │  │
-  │  │              │  │  token ◄─────┼──┼── Part 4     │  │
-  │  │              │  │ Webhook ◄────┼──┼── Part 5     │  │
+  │  │              │  │  token <─────┼──┼── Part 4     │  │
+  │  │              │  │ Webhook <────┼──┼── Part 5     │  │
   │  └──────────────┘  └───────────────┘  └─────────────┘  │
   └─────────────────────────────────────────────────────────┘
 ```
@@ -256,13 +256,13 @@ Here is a map of which settings live where:
                │                                  │
                ▼                                  ▼
   ┌──────────────────────────────────────────────────────────────────┐
-  │                    YOUR n8n WORKFLOW                             │
+  │              VERCEL ENVIRONMENT VARIABLES                        │
   │                                                                  │
   │  ┌──────────────────────────────────────────────────────────┐   │
-  │  │  LINE Credentials (in n8n credential store):             │   │
+  │  │  In your Vercel project dashboard > Settings > Env Vars: │   │
   │  │                                                          │   │
-  │  │   LINE_CHANNEL_SECRET ←──── Channel Secret               │   │
-  │  │   LINE_CHANNEL_ACCESS_TOKEN ←──── Channel Access Token   │   │
+  │  │   LINE_CHANNEL_SECRET <──── Channel Secret               │   │
+  │  │   LINE_CHANNEL_ACCESS_TOKEN <──── Channel Access Token   │   │
   │  └──────────────────────────────────────────────────────────┘   │
   │                                                                  │
   │  Channel Secret:       Used to VERIFY incoming webhook          │
@@ -282,16 +282,16 @@ Here is a map of which settings live where:
 1. In the LINE Developers Console, go to your channel's **Messaging API** tab.
 2. Scroll to the **Webhook settings** section.
 3. Click **Edit** next to Webhook URL.
-4. Enter your n8n webhook URL:
+4. Enter your Vercel webhook URL:
    ```
-   https://your-n8n-domain.com/webhook/line-sales-report
+   https://your-project.vercel.app/api/webhook
    ```
-   (Replace with your actual n8n webhook URL when ready.)
+   (Replace `your-project` with your actual Vercel project name.)
 5. Click **Update**.
-6. Click **Verify** to test the connection. You should see a success message if your n8n webhook is running and returns HTTP 200.
+6. Click **Verify** to test the connection. You should see a success message if your Vercel function is deployed and returns HTTP 200.
 7. Toggle **Use webhook** to **Enabled** (this is critical — the webhook will not fire if this is off).
 
-> **Gotcha:** The webhook URL must be HTTPS. LINE will not accept HTTP URLs. If you are testing locally, use a tunneling service like ngrok to expose your local n8n instance over HTTPS.
+> **Gotcha:** The webhook URL must be HTTPS. LINE will not accept HTTP URLs. Vercel provides HTTPS by default, so this is handled automatically.
 
 ```
   How the webhook connection works step by step:
@@ -299,7 +299,7 @@ Here is a map of which settings live where:
             LINE Developers Console
            ┌──────────────────────┐
            │  Webhook URL:        │
-           │  https://your-n8n... │ ── You type this in (step 4)
+           │  https://your-proj.. │ ── You type this in (step 4)
            │                      │
            │  [Verify] button     │ ── LINE sends a test ping (step 6)
            │                      │
@@ -316,15 +316,19 @@ Here is a map of which settings live where:
            │  to your webhook URL │                      │
            └──────────────────────┘                      │
                                                          ▼
-                                              ┌──────────────────┐
-                                              │  Your n8n server │
-                                              │                  │
-                                              │  Receives JSON:  │
-                                              │  - who sent it   │
-                                              │  - what group    │
-                                              │  - message text  │
-                                              │  - timestamp     │
-                                              └──────────────────┘
+                                              ┌──────────────────────┐
+                                              │  Vercel serverless   │
+                                              │  function            │
+                                              │                      │
+                                              │  Receives JSON:      │
+                                              │  - who sent it       │
+                                              │  - what group        │
+                                              │  - message text      │
+                                              │  - timestamp         │
+                                              │                      │
+                                              │  Then: AI parse →    │
+                                              │  Sheets → LINE reply │
+                                              └──────────────────────┘
 ```
 
 ---
@@ -334,7 +338,7 @@ Here is a map of which settings live where:
 These settings are done in the **LINE Official Account Manager** (not the Developers Console).
 
 ```
-  ⚠  You are now switching websites!
+  You are now switching websites!
 
   FROM: developers.line.biz  (Developers Console)
     TO: manager.line.biz     (Official Account Manager)
@@ -348,12 +352,12 @@ These settings are done in the **LINE Official Account Manager** (not the Develo
 ### Disable Auto-Reply Messages
 
 1. Go to https://manager.line.biz/ and select your account.
-2. Click **Settings** (gear icon) in the sidebar, or go to **Response settings** (ตั้งค่าการตอบกลับ).
+2. Click **Settings** (gear icon) in the sidebar, or go to **Response settings**.
 3. Under **Response mode**, select **Bot** (not Chat).
-4. Set **Auto-response** (การตอบกลับอัตโนมัติ) to **Disabled** (ปิด).
-5. Set **Greeting message** (ข้อความทักทาย) to **Disabled** (ปิด) — unless you want a welcome message.
+4. Set **Auto-response** to **Disabled**.
+5. Set **Greeting message** to **Disabled** — unless you want a welcome message.
 
-> **Why:** If auto-reply is on, every message to the group will trigger a canned response from the bot, which is annoying and confusing for group members.
+> **Why:** If auto-reply is on, every message to the group will trigger a canned response from the bot, which is annoying and confusing for group members. The Vercel webhook function handles all replies itself.
 
 ```
   What happens if you forget to disable auto-reply:
@@ -362,31 +366,32 @@ These settings are done in the **LINE Official Account Manager** (not the Develo
   │  LINE Group Chat                              │
   │                                               │
   │  Somchai:  Sold 5 units of Model X today      │
-  │  🤖 Bot:  ขอบคุณสำหรับข้อความ!               │  ← annoying!
+  │  Bot:  ขอบคุณสำหรับข้อความ!                    │  <- annoying!
   │  Somchai:  Customer: ABC Co., Ltd.            │
-  │  🤖 Bot:  ขอบคุณสำหรับข้อความ!               │  ← very annoying!
+  │  Bot:  ขอบคุณสำหรับข้อความ!                    │  <- very annoying!
   │  Somchai:  ...                                │
-  │  🤖 Bot:  ขอบคุณสำหรับข้อความ!               │  ← everyone leaves
+  │  Bot:  ขอบคุณสำหรับข้อความ!                    │  <- everyone leaves
   │                                               │
   └───────────────────────────────────────────────┘
 
-  What it should look like (auto-reply OFF):
+  What it should look like (auto-reply OFF, Vercel webhook active):
 
   ┌───────────────────────────────────────────────┐
   │  LINE Group Chat                              │
   │                                               │
-  │  Somchai:  Sold 5 units of Model X today      │
-  │  Somchai:  Customer: ABC Co., Ltd.            │
-  │  Pranee:   Sold 2 units of Model Y            │
+  │  Somchai:  ไปเยี่ยม PTT เสนอ Megger 150K      │
+  │  Bot:  รับทราบครับ บันทึกแล้ว:                  │
+  │        - ลูกค้า: PTT                           │
+  │        - สินค้า: Megger                        │
+  │        - มูลค่า: 150,000                       │
   │                                               │
-  │  (Bot is silently forwarding to n8n)          │
   └───────────────────────────────────────────────┘
 ```
 
 ### Enable Webhooks (Double-Check)
 
 1. Still in LINE Official Account Manager > **Settings** > **Response settings**.
-2. Ensure **Webhook** is set to **Enabled** (เปิด).
+2. Ensure **Webhook** is set to **Enabled**.
 
 > **Gotcha:** There are TWO places to enable webhooks — one in the LINE Developers Console (Part 5, step 7) and one in the LINE Official Account Manager (here). Both must be enabled for webhooks to work. This is the most common cause of "webhook not receiving events."
 
@@ -396,7 +401,7 @@ These settings are done in the **LINE Official Account Manager** (not the Develo
   ┌─────────────────────────────┐    ┌─────────────────────────────┐
   │  LINE Developers Console    │    │  LINE Official Account Mgr  │
   │                             │    │                             │
-  │  Webhook: [ON]  ✓           │    │  Webhook: [ON]  ✓           │
+  │  Webhook: [ON]              │    │  Webhook: [ON]              │
   └──────────────┬──────────────┘    └──────────────┬──────────────┘
                  │                                  │
                  └───────────┬──────────────────────┘
@@ -408,7 +413,7 @@ These settings are done in the **LINE Official Account Manager** (not the Develo
            ┌─────┴─────┐          ┌─────┴─────┐
            │ Both ON   │          │ One or    │
            │ = works!  │          │ both OFF  │
-           │  ✓  ✓     │          │ = broken! │
+           │           │          │ = broken! │
            └───────────┘          └───────────┘
 ```
 
@@ -417,12 +422,10 @@ These settings are done in the **LINE Official Account Manager** (not the Develo
 1. In the LINE Developers Console, go to your channel's **Messaging API** tab.
 2. Scroll to **LINE Official Account features**.
 3. Click the link to open the feature settings in LINE Official Account Manager.
-4. Find **Allow bot to join groups and multi-person chats** (อนุญาตให้บอทเข้าร่วมแชทกลุ่มและแชทหลายคน).
-5. Set this to **Enabled** (เปิด).
+4. Find **Allow bot to join groups and multi-person chats**.
+5. Set this to **Enabled**.
 
 > **Gotcha:** This setting defaults to disabled. If you skip this, you will not be able to add the bot to any group.
-
-
 
 ---
 
@@ -452,9 +455,12 @@ These settings are done in the **LINE Official Account Manager** (not the Develo
 
 ### Verify the Webhook Is Working
 
-1. Send a test message in the LINE group.
-2. Check your n8n webhook endpoint — you should see an incoming request with a JSON payload containing the message event.
-3. The payload will include:
+1. Send a test message in the LINE group (e.g., a simple sales report in Thai).
+2. Check if the bot replies with a confirmation message — this means the full pipeline is working (LINE → Vercel → Gemini → Sheets → LINE reply).
+3. Check your Google Sheet — you should see a new row with the parsed data.
+4. If you need to debug, check the Vercel function logs: go to your Vercel dashboard > your project > **Deployments** > click the latest deployment > **Functions** > **Logs**.
+
+The webhook payload from LINE includes:
    - `events[0].type` — should be `message`
    - `events[0].source.groupId` — the LINE group ID (save this, you will need it)
    - `events[0].source.userId` — the sender's user ID
@@ -466,19 +472,19 @@ These settings are done in the **LINE Official Account Manager** (not the Develo
   What the webhook payload looks like (simplified):
 
   ┌──────────────────────────────────────────────────────┐
-  │  Incoming POST to your n8n webhook                   │
+  │  Incoming POST to your Vercel function               │
   │                                                      │
   │  {                                                   │
   │    "events": [                                       │
   │      {                                               │
-  │        "type": "message",  ◄── type of event         │
+  │        "type": "message",  <-- type of event         │
   │        "source": {                                   │
-  │          "groupId": "C4af4...", ◄── SAVE THIS!       │
-  │          "userId": "U1a2b..."   ◄── who sent it      │
+  │          "groupId": "C4af4...", <-- SAVE THIS!       │
+  │          "userId": "U1a2b..."   <-- who sent it      │
   │        },                                            │
   │        "message": {                                  │
   │          "type": "text",                             │
-  │          "text": "Sold 5 units..." ◄── the message   │
+  │          "text": "Sold 5 units..." <-- the message   │
   │        }                                             │
   │      }                                               │
   │    ]                                                 │
@@ -494,6 +500,7 @@ These settings are done in the **LINE Official Account Manager** (not the Develo
 |---|---|---|
 | LINE Official Account Manager | https://manager.line.biz/ | Business settings, auto-reply, response mode |
 | LINE Developers Console | https://developers.line.biz/console/ | API credentials, webhook URL, technical settings |
+| Vercel Dashboard | https://vercel.com/dashboard | Function logs, environment variables, deployments |
 | Messaging API Docs | https://developers.line.biz/en/docs/messaging-api/ | API reference and event documentation |
 | Webhook Event Reference | https://developers.line.biz/en/reference/messaging-api/#webhook-event-objects | Payload structure for incoming events |
 
@@ -501,13 +508,13 @@ These settings are done in the **LINE Official Account Manager** (not the Develo
 
 ## Quick Reference: Credentials to Save
 
-Record these values and store them securely (e.g., in n8n credentials, a password manager, or environment variables):
+Record these values and store them securely (in Vercel environment variables and/or a password manager):
 
 ```
 LINE_CHANNEL_SECRET=<from Part 4>
 LINE_CHANNEL_ACCESS_TOKEN=<from Part 4>
 LINE_GROUP_ID=<from Part 7 webhook test payload>
-WEBHOOK_URL=<your n8n webhook URL>
+WEBHOOK_URL=https://your-project.vercel.app/api/webhook
 ```
 
 ```
@@ -518,19 +525,20 @@ WEBHOOK_URL=<your n8n webhook URL>
   ├────────────────────────┼────────────────────────────────────────────┤
   │                        │                                            │
   │  LINE_CHANNEL_SECRET   │  Developers Console → Basic settings tab  │
-  │         │              │  (auto-generated, just copy it)           │
-  │         │              │                                            │
+  │                        │  (auto-generated, just copy it)           │
+  │                        │                                            │
   │  LINE_CHANNEL_ACCESS   │  Developers Console → Messaging API tab   │
-  │  _TOKEN │              │  (click "Issue" first, then copy)         │
-  │         │              │                                            │
+  │  _TOKEN                │  (click "Issue" first, then copy)         │
+  │                        │                                            │
   │  LINE_GROUP_ID         │  From the webhook test payload in Part 7  │
-  │         │              │  (events[0].source.groupId)               │
-  │         │              │                                            │
-  │  WEBHOOK_URL           │  Your own n8n server URL                  │
-  │         │              │  (you create this, not LINE)              │
-  │         ▼              │                                            │
-  │   All four go into     │                                            │
-  │   your n8n workflow    │                                            │
+  │                        │  (events[0].source.groupId)               │
+  │                        │                                            │
+  │  WEBHOOK_URL           │  Your Vercel deployment URL               │
+  │                        │  (https://your-project.vercel.app/api/    │
+  │                        │   webhook)                                │
+  │                        │                                            │
+  │   All credentials go   │                                            │
+  │   into Vercel env vars │                                            │
   └────────────────────────┴────────────────────────────────────────────┘
 ```
 
@@ -541,7 +549,7 @@ WEBHOOK_URL=<your n8n webhook URL>
 - [ ] Webhook enabled in **both** LINE Developers Console AND LINE Official Account Manager
 - [ ] Auto-reply is **disabled** (otherwise the bot spams the group)
 - [ ] Bot is allowed to **join groups** (otherwise invite fails silently)
-- [ ] Webhook URL is **HTTPS** (not HTTP)
+- [ ] Webhook URL is **HTTPS** (Vercel provides this by default)
 - [ ] Channel Access Token has been **issued** (not just displayed as empty)
 - [ ] Response mode is set to **Bot** (not Chat — Chat mode disables webhooks)
 - [ ] Bot has been **added as a friend** before being invited to a group
@@ -559,51 +567,53 @@ Use this to track your progress. Mark each box when you have verified the settin
   ║                                                                     ║
   ║  1. WEBHOOK ENABLED (two places!)                                   ║
   ║     ┌────────────────────────────────┐                              ║
-  ║     │ [ ] Developers Console         │  ← Part 5, step 7           ║
-  ║     │ [ ] Official Account Manager   │  ← Part 6, "Enable Webhooks"║
+  ║     │ [ ] Developers Console         │  <- Part 5, step 7           ║
+  ║     │ [ ] Official Account Manager   │  <- Part 6, "Enable Webhooks"║
   ║     └────────────────────────────────┘                              ║
   ║     Both must be ON, or nothing works.                              ║
   ║                                                                     ║
   ║  2. AUTO-REPLY DISABLED                                             ║
   ║     ┌────────────────────────────────┐                              ║
-  ║     │ [ ] Auto-response = OFF        │  ← Part 6, step 4           ║
+  ║     │ [ ] Auto-response = OFF        │  <- Part 6, step 4           ║
   ║     └────────────────────────────────┘                              ║
   ║     If ON, bot replies to every message with a default text.        ║
   ║                                                                     ║
   ║  3. BOT CAN JOIN GROUPS                                             ║
   ║     ┌────────────────────────────────┐                              ║
-  ║     │ [ ] Join groups = Enabled      │  ← Part 6, "Allow Bot..."   ║
+  ║     │ [ ] Join groups = Enabled      │  <- Part 6, "Allow Bot..."   ║
   ║     └────────────────────────────────┘                              ║
   ║     Default is OFF. Must turn ON or bot cannot join groups.         ║
   ║                                                                     ║
   ║  4. WEBHOOK URL IS HTTPS                                            ║
   ║     ┌────────────────────────────────┐                              ║
-  ║     │ [ ] URL starts with https://   │  ← Part 5, step 4           ║
+  ║     │ [ ] URL starts with https://   │  <- Part 5, step 4           ║
   ║     └────────────────────────────────┘                              ║
-  ║     LINE rejects plain http:// URLs.                                ║
+  ║     Vercel provides HTTPS by default.                               ║
   ║                                                                     ║
   ║  5. ACCESS TOKEN ISSUED                                             ║
   ║     ┌────────────────────────────────┐                              ║
-  ║     │ [ ] Token is not blank/empty   │  ← Part 4, "Issue" button   ║
+  ║     │ [ ] Token is not blank/empty   │  <- Part 4, "Issue" button   ║
   ║     └────────────────────────────────┘                              ║
-  ║     You must click "Issue" — the field is empty by default.         ║
+  ║     You must click "Issue" -- the field is empty by default.        ║
   ║                                                                     ║
   ║  6. RESPONSE MODE = BOT                                             ║
   ║     ┌────────────────────────────────┐                              ║
-  ║     │ [ ] Response mode = "Bot"      │  ← Part 6, step 3           ║
+  ║     │ [ ] Response mode = "Bot"      │  <- Part 6, step 3           ║
   ║     └────────────────────────────────┘                              ║
   ║     "Chat" mode disables webhooks entirely.                         ║
   ║                                                                     ║
   ║  7. BOT ADDED AS FRIEND                                             ║
   ║     ┌────────────────────────────────┐                              ║
-  ║     │ [ ] Bot is your LINE friend    │  ← Part 7, step 2           ║
+  ║     │ [ ] Bot is your LINE friend    │  <- Part 7, step 2           ║
   ║     └────────────────────────────────┘                              ║
   ║     Add as friend first, THEN invite to group.                      ║
   ║                                                                     ║
   ╠═══════════════════════════════════════════════════════════════════════╣
   ║                                                                     ║
-  ║  ALL 7 CHECKED?  ──→  Send a test message in the group.            ║
-  ║                       If n8n receives it, you are done!             ║
+  ║  ALL 7 CHECKED?  -->  Send a test message in the group.             ║
+  ║                       If the bot replies with a confirmation        ║
+  ║                       and data appears in Google Sheets, you        ║
+  ║                       are done!                                     ║
   ║                                                                     ║
   ╚═══════════════════════════════════════════════════════════════════════╝
 ```
@@ -615,7 +625,7 @@ Use this to track your progress. Mark each box when you have verified the settin
 If something is not working, use this diagram to narrow down the problem:
 
 ```
-  Start here: "I sent a message in the LINE group but n8n did not receive it."
+  Start here: "I sent a message in the LINE group but nothing happened."
                                     │
                                     ▼
                    ┌────────────────────────────────┐
@@ -647,10 +657,22 @@ If something is not working, use this diagram to narrow down the problem:
   ┌────────┴──────────┐
   │                   │
   ▼                   ▼
- ┌─────────────────┐  ┌──────────────────────────────┐
- │ Check n8n:      │  │ Change to "Bot" mode in      │
- │ Is the workflow │  │ Official Account Manager     │
- │ active? Is the  │  │ > Settings > Response mode.  │
- │ URL correct?    │  └──────────────────────────────┘
- └─────────────────┘
+ ┌──────────────────┐  ┌──────────────────────────────┐
+ │ Check Vercel:    │  │ Change to "Bot" mode in      │
+ │                  │  │ Official Account Manager     │
+ │ 1. Is the       │  │ > Settings > Response mode.  │
+ │ function        │  └──────────────────────────────┘
+ │ deployed?       │
+ │                  │
+ │ 2. Check logs:  │
+ │ Vercel dashboard│
+ │ > Deployments   │
+ │ > Functions     │
+ │ > Logs          │
+ │                  │
+ │ 3. Are env vars │
+ │ set correctly?  │
+ │ (LINE_CHANNEL_  │
+ │ SECRET, etc.)   │
+ └──────────────────┘
 ```

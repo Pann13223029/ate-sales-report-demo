@@ -1,3 +1,7 @@
+> **ARCHIVED:** This guide was part of the original planning phase. The final implementation uses direct API calls via urllib.request instead of OpenClaw. Kept for reference. See `demo/README.md` for the current implementation.
+
+---
+
 # OpenClaw Gateway Setup Guide — ATE Sales Report System
 
 > **Company:** Advanced Technology Equipment Co., Ltd. (ATE)
