@@ -9,6 +9,7 @@ import json
 import hashlib
 import hmac
 import base64
+import re
 import urllib.request
 from http.server import BaseHTTPRequestHandler
 from datetime import datetime, timezone, timedelta
@@ -316,30 +317,254 @@ HELP_RESPONSE = """📝 วิธีรายงานการขาย
 
 พิมพ์ข้อความรายงานเข้ามาได้เลยครับ ระบบจะบันทึกให้อัตโนมัติ
 
-ตัวอย่าง:
+ตัวอย่างรายงาน:
 • ไปเยี่ยม PTT เสนอ Megger MTO330 ราคา 150,000 สถานะเจรจา
 • โทรคุย EGAT เรื่อง Fluke 1770 ลูกค้าสนใจ งบ 520,000
 • ปิดดีล SCG Salisbury ถุงมือ 15 ชุด 975,000 วางมัดจำ 50%
 • จะไปเยี่ยม IRPC อังคารหน้า เรื่อง Megger MIT525
 • ส่ง Megger MTO330 ของ PTT เข้าซ่อม warranty
 • ยื่นซองประมูล กฟภ. Megger MIT525 2.1 ล้าน เปิดซอง 25 มี.ค.
+• เสียงาน Thai Oil MIT1025 ลูกค้าตัดงบ
 
 อัพเดทดีลเดิม:
-• พิมพ์: อัพเดท MSG-XXXXX แล้วตามด้วยข้อมูลใหม่
-• ระบบจะอัพเดทแทนการสร้างรายการใหม่
+• พิมพ์: อัพเดท MSG-XXXXX ตามด้วยข้อมูลใหม่
+• ตัวอย่าง: อัพเดท MSG-A1B2C สถานะเจรจา ราคา 2.8 ล้าน
+• ถ้ารายงานซ้ำลูกค้า/สินค้าเดิม ระบบจะแนะนำ Batch ID ให้
+
+คำสั่งอื่นๆ:
+• สรุป — ดูสรุป pipeline
+• วิธีใช้ — ดูข้อความนี้
 
 ข้อมูลสำคัญ 5 อย่าง:
 ✅ ชื่อลูกค้า
-✅ สินค้า/แบรนด์
+✅ สินค้า/แบรนด์ (Megger, Fluke, CRC, Salisbury, SmartWasher, IK Sprayer, HVOP)
 ✅ มูลค่าดีล
-✅ ประเภทกิจกรรม (เยี่ยม/โทร/เสนอราคา/ปิดดีล/ส่งซ่อม)
-✅ สถานะดีล (สนใจ/นัดเยี่ยม/เจรจา/ส่ง QT/ประมูล/ปิดได้/เสียงาน)"""
+✅ กิจกรรม (เยี่ยม/โทร/เสนอราคา/ปิดดีล/ส่งซ่อม)
+✅ สถานะ (สนใจ/นัดเยี่ยม/เยี่ยมแล้ว/เจรจา/ส่ง QT/ประมูล/ปิดได้/เสียงาน)"""
+
+
+# ---------------------------------------------------------------------------
+# Update existing entries: อัพเดท MSG-XXXXX
+# ---------------------------------------------------------------------------
+
+UPDATE_PATTERN = re.compile(
+    r'^(อัพเดท|อัพเดต|update|แก้ไข)\s+(MSG-[A-Za-z0-9]+)\s*(.*)',
+    re.IGNORECASE | re.DOTALL
+)
+
+# Maps AI output field names → spreadsheet header names
+AI_FIELD_TO_HEADER = {
+    "customer_name": "Customer",
+    "contact_person": "Contact Person",
+    "contact_channel": "Contact Channel",
+    "product_brand": "Product Brand",
+    "product_name": "Product Name",
+    "quantity": "Quantity",
+    "deal_value_thb": "Deal Value (THB)",
+    "activity_type": "Activity Type",
+    "sales_stage": "Sales Stage",
+    "payment_status": "Payment Status",
+    "planned_visit_date": "Planned Visit Date",
+    "bidding_date": "Bidding Date",
+    "accompanying_rep": "Accompanying Rep",
+    "close_reason": "Close Reason",
+    "follow_up_notes": "Follow-up Notes",
+    "summary_en": "Summary (EN)",
+}
+
+
+def _find_rows_by_batch_id(sheet, batch_id):
+    """Find all row numbers containing the batch ID in column U (21, 1-based)."""
+    try:
+        cells = sheet.findall(batch_id, in_column=21)
+        return [cell.row for cell in cells]
+    except Exception:
+        return []
+
+
+def _apply_cell_updates(sheet, row_numbers, cell_updates):
+    """Apply cell updates to specific rows. cell_updates: list of (col_1based, value)."""
+    import gspread
+    if not row_numbers or not cell_updates:
+        return
+    batch = []
+    for row_num in row_numbers:
+        for col_1based, value in cell_updates:
+            batch.append(gspread.Cell(row_num, col_1based, value))
+    if batch:
+        sheet.update_cells(batch, value_input_option="USER_ENTERED")
+
+
+def handle_update_command(message_text, reply_token, rep_name):
+    """Handle 'อัพเดท MSG-XXXXX ...' command. Returns True if handled."""
+    match = UPDATE_PATTERN.match(message_text.strip())
+    if not match:
+        return False
+
+    batch_id = match.group(2).upper()
+    update_text = match.group(3).strip()
+
+    if not update_text:
+        reply_to_line(reply_token,
+            f"กรุณาระบุข้อมูลที่ต้องการอัพเดทด้วยครับ\n"
+            f"ตัวอย่าง: อัพเดท {batch_id} สถานะเจรจา ราคา 2.8 ล้าน")
+        return True
+
+    client = get_sheets_client()
+    spreadsheet = client.open_by_key(GOOGLE_SHEETS_ID)
+    combined = get_or_create_combined_sheet(spreadsheet)
+
+    # Find existing rows in Combined
+    row_numbers = _find_rows_by_batch_id(combined, batch_id)
+    if not row_numbers:
+        reply_to_line(reply_token,
+            f"ไม่พบรายการ {batch_id} ในระบบครับ กรุณาตรวจสอบ Batch ID อีกครั้ง")
+        return True
+
+    # Get existing data from first matching row for AI context
+    existing_row = combined.row_values(row_numbers[0])
+    existing_data = {}
+    for i, header in enumerate(LIVE_DATA_HEADERS):
+        if i < len(existing_row):
+            existing_data[header] = existing_row[i]
+
+    # Parse update with AI
+    update_prompt = f"""An existing sales entry is being updated. Current data:
+{json.dumps(existing_data, ensure_ascii=False)}
+
+The rep says: "{update_text}"
+
+Return ONLY the fields that should change as a JSON object. Use these exact field names:
+customer_name, contact_person, contact_channel, product_brand, product_name, quantity,
+deal_value_thb, activity_type, sales_stage, payment_status, planned_visit_date,
+bidding_date, accompanying_rep, close_reason, follow_up_notes, summary_en
+
+Valid sales_stage values: lead, plan_to_visit, visited, negotiation, quotation_sent, bidding, closed_won, closed_lost, job_expired, equipment_defect
+Valid payment_status values: pending, deposit, paid
+Parse Thai: "เจรจา"=negotiation, "ส่ง QT"=quotation_sent, "ปิดได้"=closed_won, "เสียงาน"=closed_lost, "หมดอายุ"=job_expired, "ประมูล"=bidding
+Parse values: "2.8ล้าน"=2800000, "150K"=150000, "แสนห้า"=150000
+
+Return ONLY valid JSON with changed fields. Do NOT include unchanged fields."""
+
+    try:
+        payload = json.dumps({
+            "contents": [{"role": "user", "parts": [{"text": update_prompt}]}],
+            "systemInstruction": {"parts": [{"text": "You extract field changes from Thai sales update messages. Return ONLY valid JSON."}]},
+            "generationConfig": {"responseMimeType": "application/json", "temperature": 0}
+        }).encode()
+
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+        req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
+
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read())
+
+        text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+        if text.startswith("```"):
+            lines = text.split("\n")
+            lines = [l for l in lines[1:] if l.strip() != "```"]
+            text = "\n".join(lines).strip()
+
+        changes = json.loads(text)
+    except Exception as e:
+        print(f"[UPDATE] AI parse error: {e}")
+        sys.stdout.flush()
+        reply_to_line(reply_token, "ขออภัยครับ ไม่สามารถประมวลผลการอัพเดทได้ กรุณาลองใหม่")
+        return True
+
+    if not changes:
+        reply_to_line(reply_token, "ไม่พบข้อมูลที่ต้องการเปลี่ยนแปลงครับ กรุณาระบุให้ชัดเจนกว่านี้")
+        return True
+
+    # Build cell updates: (col_1based, value) pairs
+    header_to_col = {h: i + 1 for i, h in enumerate(LIVE_DATA_HEADERS)}
+    cell_updates = []
+
+    # Handle is_training → Training Flag
+    if "is_training" in changes:
+        training_val = "yes" if changes.pop("is_training") else ""
+        col = header_to_col.get("Training Flag")
+        if col:
+            cell_updates.append((col, training_val))
+
+    for ai_field, new_value in changes.items():
+        header_name = AI_FIELD_TO_HEADER.get(ai_field)
+        if header_name and header_name in header_to_col:
+            col = header_to_col[header_name]
+            cell_updates.append((col, str(new_value) if new_value is not None else ""))
+
+    # Update timestamp
+    now = datetime.now(BKK_TZ).strftime("%Y-%m-%d %H:%M:%S")
+    cell_updates.append((header_to_col["Timestamp"], now))
+
+    if not cell_updates:
+        reply_to_line(reply_token, "ไม่สามารถระบุฟิลด์ที่ต้องการเปลี่ยนแปลงได้ครับ")
+        return True
+
+    # Apply updates across all sheets
+    updated_sheets = []
+
+    # 1. Combined
+    _apply_cell_updates(combined, row_numbers, cell_updates)
+    updated_sheets.append("Combined")
+
+    # 2. Rep's personal sheet
+    try:
+        original_rep = existing_data.get("Rep Name", rep_name)
+        rep_sheet = spreadsheet.worksheet(original_rep)
+        rep_rows = _find_rows_by_batch_id(rep_sheet, batch_id)
+        if rep_rows:
+            _apply_cell_updates(rep_sheet, rep_rows, cell_updates)
+            updated_sheets.append(original_rep)
+    except Exception:
+        pass
+
+    # 3. Live Data
+    try:
+        live_sheet = get_or_create_live_tab(spreadsheet)
+        live_rows = _find_rows_by_batch_id(live_sheet, batch_id)
+        if live_rows:
+            _apply_cell_updates(live_sheet, live_rows, cell_updates)
+            updated_sheets.append("Live Data")
+    except Exception:
+        pass
+
+    # 4. Major Opportunity (if Megger deal)
+    is_megger = (existing_data.get("Product Brand") == "Megger"
+                 or changes.get("product_brand") == "Megger")
+    if is_megger:
+        try:
+            mo_sheet = spreadsheet.worksheet("Major Opportunity")
+            mo_rows = _find_rows_by_batch_id(mo_sheet, batch_id)
+            if mo_rows:
+                _apply_cell_updates(mo_sheet, mo_rows, cell_updates)
+                updated_sheets.append("Major Opportunity")
+        except Exception:
+            pass
+
+    # Build before→after reply
+    change_lines = []
+    for ai_field, new_value in changes.items():
+        header_name = AI_FIELD_TO_HEADER.get(ai_field, ai_field)
+        old_value = existing_data.get(header_name, "—")
+        if old_value == "":
+            old_value = "—"
+        change_lines.append(f"• {header_name}: {old_value} → {new_value}")
+
+    reply_text = f"✅ อัพเดท {batch_id} เรียบร้อยครับ ({len(row_numbers)} รายการ)\n\n"
+    reply_text += "\n".join(change_lines)
+
+    reply_to_line(reply_token, reply_text)
+    print(f"[UPDATE] Updated {batch_id} in {updated_sheets}: {len(changes)} fields, {len(row_numbers)} rows")
+    sys.stdout.flush()
+    return True
 
 
 def generate_summary(reply_token: str):
-    """Generate pipeline summary from Sheet1 data using Gemini."""
+    """Generate pipeline summary from Combined sheet data using Gemini."""
     client = get_sheets_client()
-    sheet = client.open_by_key(GOOGLE_SHEETS_ID).sheet1
+    spreadsheet = client.open_by_key(GOOGLE_SHEETS_ID)
+    sheet = get_or_create_combined_sheet(spreadsheet)
     all_data = sheet.get_all_values()
 
     if len(all_data) <= 1:
@@ -449,6 +674,60 @@ LIVE_DATA_HEADERS = [
 ]
 
 
+def _format_new_sheet(spreadsheet, sheet):
+    """Apply standard header formatting (bold white on blue, frozen) to a new sheet."""
+    spreadsheet.batch_update({"requests": [
+        {
+            "repeatCell": {
+                "range": {"sheetId": sheet.id, "startRowIndex": 0, "endRowIndex": 1},
+                "cell": {"userEnteredFormat": {
+                    "backgroundColor": {"red": 0.15, "green": 0.3, "blue": 0.55},
+                    "textFormat": {"bold": True, "foregroundColor": {"red": 1, "green": 1, "blue": 1}},
+                }},
+                "fields": "userEnteredFormat(backgroundColor,textFormat)",
+            }
+        },
+        {
+            "updateSheetProperties": {
+                "properties": {"sheetId": sheet.id, "gridProperties": {"frozenRowCount": 1}},
+                "fields": "gridProperties.frozenRowCount",
+            }
+        },
+    ]})
+
+
+def get_or_create_rep_registry(spreadsheet):
+    """Get 'Rep Registry' tab (maps LINE user IDs to display names), creating if needed."""
+    import gspread
+    try:
+        return spreadsheet.worksheet("Rep Registry")
+    except gspread.exceptions.WorksheetNotFound:
+        reg = spreadsheet.add_worksheet(title="Rep Registry", rows=50, cols=3)
+        reg.update(range_name="A1:C1", values=[["User ID", "Display Name", "Last Active"]])
+        _format_new_sheet(spreadsheet, reg)
+        print("[SHEETS] Created 'Rep Registry' tab")
+        sys.stdout.flush()
+        return reg
+
+
+def register_rep(spreadsheet, user_id, display_name):
+    """Register or update a rep in the Rep Registry tab."""
+    from datetime import datetime
+    reg = get_or_create_rep_registry(spreadsheet)
+    now = datetime.now(BKK_TZ).strftime("%Y-%m-%d %H:%M:%S")
+
+    # Check if user already registered
+    try:
+        cell = reg.find(user_id, in_column=1)
+        # Update display name + last active
+        reg.update(range_name=f"B{cell.row}:C{cell.row}", values=[[display_name, now]])
+    except Exception:
+        # New rep — append
+        reg.append_row([user_id, display_name, now], value_input_option="USER_ENTERED")
+        print(f"[REGISTRY] Registered new rep: {display_name} ({user_id})")
+        sys.stdout.flush()
+
+
 def get_or_create_live_tab(spreadsheet):
     """Get the 'Live Data' tab, creating it with headers if it doesn't exist."""
     import gspread
@@ -457,32 +736,196 @@ def get_or_create_live_tab(spreadsheet):
     except gspread.exceptions.WorksheetNotFound:
         live_sheet = spreadsheet.add_worksheet(title="Live Data", rows=500, cols=24)
         live_sheet.update(range_name="A1:X1", values=[LIVE_DATA_HEADERS])
-        # Bold header
-        spreadsheet.batch_update({"requests": [{
-            "repeatCell": {
-                "range": {"sheetId": live_sheet.id, "startRowIndex": 0, "endRowIndex": 1},
-                "cell": {"userEnteredFormat": {
-                    "backgroundColor": {"red": 0.15, "green": 0.3, "blue": 0.55},
-                    "textFormat": {"bold": True, "foregroundColor": {"red": 1, "green": 1, "blue": 1}},
-                }},
-                "fields": "userEnteredFormat(backgroundColor,textFormat)",
-            }
-        }, {
-            "updateSheetProperties": {
-                "properties": {"sheetId": live_sheet.id, "gridProperties": {"frozenRowCount": 1}},
-                "fields": "gridProperties.frozenRowCount",
-            }
-        }]})
-        print(f"[SHEETS] Created 'Live Data' tab with headers")
+        # Format header + freeze + protect (permanent record, restricted)
+        spreadsheet.batch_update({"requests": [
+            {
+                "repeatCell": {
+                    "range": {"sheetId": live_sheet.id, "startRowIndex": 0, "endRowIndex": 1},
+                    "cell": {"userEnteredFormat": {
+                        "backgroundColor": {"red": 0.15, "green": 0.3, "blue": 0.55},
+                        "textFormat": {"bold": True, "foregroundColor": {"red": 1, "green": 1, "blue": 1}},
+                    }},
+                    "fields": "userEnteredFormat(backgroundColor,textFormat)",
+                }
+            },
+            {
+                "updateSheetProperties": {
+                    "properties": {"sheetId": live_sheet.id, "gridProperties": {"frozenRowCount": 1}},
+                    "fields": "gridProperties.frozenRowCount",
+                }
+            },
+            {
+                "addProtectedRange": {
+                    "protectedRange": {
+                        "range": {"sheetId": live_sheet.id},
+                        "description": "Live Data — permanent record, bot-managed only",
+                        "warningOnly": False,
+                    }
+                }
+            },
+        ]})
+        print("[SHEETS] Created 'Live Data' tab with headers + protection")
         sys.stdout.flush()
         return live_sheet
 
 
-def append_to_sheets(parsed: dict, rep_name: str, raw_message: str):
+def get_or_create_combined_sheet(spreadsheet):
+    """Get 'Combined' tab. If not found, rename Sheet1 to 'Combined' and protect it."""
+    import gspread
+    try:
+        return spreadsheet.worksheet("Combined")
+    except gspread.exceptions.WorksheetNotFound:
+        # First run with new code — rename Sheet1 to "Combined"
+        sheet1 = spreadsheet.sheet1
+        sheet1.update_title("Combined")
+        # Protect: only service account can edit (add management emails manually later)
+        spreadsheet.batch_update({"requests": [{
+            "addProtectedRange": {
+                "protectedRange": {
+                    "range": {"sheetId": sheet1.id},
+                    "description": "Combined sheet — bot-managed, add management editors manually",
+                    "warningOnly": False,
+                }
+            }
+        }]})
+        print("[SHEETS] Renamed 'Sheet1' to 'Combined' with protection")
+        sys.stdout.flush()
+        return sheet1
+
+
+def get_or_create_rep_sheet(spreadsheet, rep_name):
+    """Get rep's personal sheet, creating it with headers + protection if new."""
+    import gspread
+    try:
+        return spreadsheet.worksheet(rep_name)
+    except gspread.exceptions.WorksheetNotFound:
+        rep_sheet = spreadsheet.add_worksheet(title=rep_name, rows=500, cols=24)
+        rep_sheet.update(range_name="A1:X1", values=[LIVE_DATA_HEADERS])
+        # Format header + freeze + protect (only service account can edit)
+        spreadsheet.batch_update({"requests": [
+            {
+                "repeatCell": {
+                    "range": {"sheetId": rep_sheet.id, "startRowIndex": 0, "endRowIndex": 1},
+                    "cell": {"userEnteredFormat": {
+                        "backgroundColor": {"red": 0.15, "green": 0.3, "blue": 0.55},
+                        "textFormat": {"bold": True, "foregroundColor": {"red": 1, "green": 1, "blue": 1}},
+                    }},
+                    "fields": "userEnteredFormat(backgroundColor,textFormat)",
+                }
+            },
+            {
+                "updateSheetProperties": {
+                    "properties": {"sheetId": rep_sheet.id, "gridProperties": {"frozenRowCount": 1}},
+                    "fields": "gridProperties.frozenRowCount",
+                }
+            },
+            {
+                "addProtectedRange": {
+                    "protectedRange": {
+                        "range": {"sheetId": rep_sheet.id},
+                        "description": f"Personal sheet for {rep_name} — bot-managed",
+                        "warningOnly": False,
+                    }
+                }
+            },
+        ]})
+        print(f"[SHEETS] Created personal sheet for '{rep_name}' with protection")
+        sys.stdout.flush()
+        return rep_sheet
+
+
+def get_or_create_major_opportunity_sheet(spreadsheet):
+    """Get 'Major Opportunity' tab for Megger deals, creating if needed."""
+    import gspread
+    try:
+        return spreadsheet.worksheet("Major Opportunity")
+    except gspread.exceptions.WorksheetNotFound:
+        mo_sheet = spreadsheet.add_worksheet(title="Major Opportunity", rows=500, cols=24)
+        mo_sheet.update(range_name="A1:X1", values=[LIVE_DATA_HEADERS])
+        _format_new_sheet(spreadsheet, mo_sheet)
+        print("[SHEETS] Created 'Major Opportunity' tab with headers")
+        sys.stdout.flush()
+        return mo_sheet
+
+
+def _detect_matching_deals(combined_sheet, activities):
+    """Check Combined sheet for existing active deals matching new activities.
+    Returns list of match dicts: {batch_id, customer, brand, product, value, stage}
+    """
+    all_data = combined_sheet.get_all_values()
+    if len(all_data) <= 1:
+        return []
+
+    headers = all_data[0]
+    try:
+        customer_col = headers.index("Customer")
+        brand_col = headers.index("Product Brand")
+        product_col = headers.index("Product Name")
+        stage_col = headers.index("Sales Stage")
+        value_col = headers.index("Deal Value (THB)")
+        batch_col = headers.index("Batch ID")
+    except ValueError:
+        return []
+
+    terminal = {"closed_won", "closed_lost", "job_expired", "equipment_defect"}
+    matches = []
+    seen_batches = set()
+
+    for activity in activities:
+        new_customer = (activity.get("customer_name") or "").strip().lower()
+        new_brand = (activity.get("product_brand") or "").strip().lower()
+        new_product = (activity.get("product_name") or "").strip().lower()
+        if not new_customer:
+            continue
+
+        for row in all_data[1:]:
+            if len(row) <= batch_col:
+                continue
+            existing_batch = row[batch_col].strip()
+            if not existing_batch or existing_batch in seen_batches:
+                continue
+
+            existing_stage = row[stage_col].strip().lower()
+            if existing_stage in terminal:
+                continue
+
+            existing_customer = row[customer_col].strip().lower()
+            existing_brand = row[brand_col].strip().lower()
+            existing_product = row[product_col].strip().lower()
+
+            # Match: customer substring + same brand or product
+            customer_match = (new_customer in existing_customer
+                              or existing_customer in new_customer)
+            product_match = ((new_brand and new_brand == existing_brand)
+                             or (new_product and new_product in existing_product))
+
+            if customer_match and product_match:
+                matches.append({
+                    "batch_id": existing_batch,
+                    "customer": row[customer_col],
+                    "brand": row[brand_col],
+                    "product": row[product_col],
+                    "value": row[value_col] if value_col < len(row) else "",
+                    "stage": row[stage_col],
+                })
+                seen_batches.add(existing_batch)
+
+    return matches[:3]  # Max 3 matches
+
+
+def append_to_sheets(parsed: dict, rep_name: str, raw_message: str, user_id: str = ""):
+    """Write parsed activities to all sheets. Returns list of matching existing deals."""
     import gspread
 
     client = get_sheets_client()
     spreadsheet = client.open_by_key(GOOGLE_SHEETS_ID)
+
+    # Register rep in Rep Registry (for push notifications)
+    if user_id:
+        try:
+            register_rep(spreadsheet, user_id, rep_name)
+        except Exception:
+            pass
 
     now = datetime.now(BKK_TZ).strftime("%Y-%m-%d %H:%M:%S")
 
@@ -524,17 +967,44 @@ def append_to_sheets(parsed: dict, rep_name: str, raw_message: str):
         ]
         rows.append(row)
 
+    matches = []
+
     if rows:
-        # Write to Live Data tab FIRST (permanent record)
+        # Get Combined sheet (used for both match detection and writing)
+        combined_sheet = get_or_create_combined_sheet(spreadsheet)
+
+        # Detect matching existing deals BEFORE writing
+        try:
+            matches = _detect_matching_deals(combined_sheet, activities)
+        except Exception:
+            pass
+
+        # 1. Write to rep's personal sheet (auto-create on first message)
+        rep_sheet = get_or_create_rep_sheet(spreadsheet, rep_name)
+        rep_sheet.append_rows(rows, value_input_option="USER_ENTERED")
+        print(f"[SHEETS] Saved {len(rows)} rows to '{rep_name}' personal sheet")
+        sys.stdout.flush()
+
+        # 2. Write to Combined sheet (dashboard source)
+        combined_sheet.append_rows(rows, value_input_option="USER_ENTERED")
+        print(f"[SHEETS] Saved {len(rows)} rows to 'Combined' sheet")
+        sys.stdout.flush()
+
+        # 3. Write to Live Data (permanent record, never cleared)
         live_sheet = get_or_create_live_tab(spreadsheet)
         live_sheet.append_rows(rows, value_input_option="USER_ENTERED")
         print(f"[SHEETS] Saved {len(rows)} rows to 'Live Data' tab")
         sys.stdout.flush()
 
-        # Then write to Sheet1 (demo/dashboard tab)
-        sheet1 = spreadsheet.sheet1
-        sheet1.append_rows(rows, value_input_option="USER_ENTERED")
-        print(f"[SHEETS] Saved {len(rows)} rows to Sheet1")
+        # 4. If any Megger deals, also copy to Major Opportunity tab
+        megger_rows = [r for r in rows if r[5] == "Megger"]  # col F (index 5) = Product Brand
+        if megger_rows:
+            mo_sheet = get_or_create_major_opportunity_sheet(spreadsheet)
+            mo_sheet.append_rows(megger_rows, value_input_option="USER_ENTERED")
+            print(f"[SHEETS] Copied {len(megger_rows)} Megger rows to 'Major Opportunity'")
+            sys.stdout.flush()
+
+    return matches
 
 
 # ---------------------------------------------------------------------------
@@ -694,6 +1164,16 @@ class handler(BaseHTTPRequestHandler):
             reply_to_line(reply_token, HELP_RESPONSE)
             return
 
+        # Check for update command: อัพเดท MSG-XXXXX ...
+        if UPDATE_PATTERN.match(message_text.strip()):
+            try:
+                handle_update_command(message_text, reply_token, rep_name)
+            except Exception as e:
+                print(f"[UPDATE] Error: {e}")
+                sys.stdout.flush()
+                reply_to_line(reply_token, "ขออภัยครับ ไม่สามารถอัพเดทได้ กรุณาลองใหม่")
+            return
+
         try:
             # Step 1: Parse with AI
             parsed = parse_message(message_text)
@@ -704,9 +1184,10 @@ class handler(BaseHTTPRequestHandler):
 
             # Step 2: Write to Google Sheets
             sheets_ok = False
+            matches = []
             if GOOGLE_SHEETS_ID and GOOGLE_SERVICE_ACCOUNT_JSON:
                 try:
-                    append_to_sheets(parsed, rep_name, message_text)
+                    matches = append_to_sheets(parsed, rep_name, message_text, user_id)
                     sheets_ok = True
                 except Exception as sheets_err:
                     print(f"[SHEETS] Error: {type(sheets_err).__name__}: {str(sheets_err)[:200]}")
@@ -717,6 +1198,17 @@ class handler(BaseHTTPRequestHandler):
             confirmation = build_nudge_confirmation(parsed, ai_confirmation)
             if not sheets_ok and GOOGLE_SHEETS_ID:
                 confirmation += "\n\n⚠️ (ระบบบันทึกข้อมูลขัดข้อง กรุณาลองอีกครั้ง)"
+
+            # Append smart match info if existing deals found
+            if matches:
+                match_note = "\n\n📋 พบดีลที่อาจตรงกัน:"
+                for m in matches:
+                    val_str = f"฿{float(m['value']):,.0f}" if m['value'] else "—"
+                    match_note += (f"\n• {m['batch_id']} | {m['customer']} / "
+                                   f"{m['brand']} {m['product']} / {val_str} / {m['stage']}")
+                match_note += "\n\nถ้าต้องการอัพเดทดีลเดิม พิมพ์: อัพเดท [Batch ID] ตามด้วยข้อมูลใหม่"
+                confirmation += match_note
+
             reply_to_line(reply_token, confirmation)
 
         except Exception as e:
