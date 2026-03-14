@@ -1,0 +1,8 @@
+.DS_Store
+.env
+*.json
+!demo/vercel.json
+!demo/package.json
+__pycache__/
+.vercel/
+node_modules/
