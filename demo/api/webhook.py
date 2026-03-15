@@ -312,6 +312,7 @@ def get_sheets_client():
 
 SUMMARY_KEYWORDS = {"สรุป", "สรุปยอด", "สรุปยอดขาย", "ยอดขาย", "report", "summary"}
 HELP_KEYWORDS = {"วิธีรายงาน", "วิธีใช้", "help", "ช่วย"}
+HELP_UPDATE_KEYWORDS = {"วิธีอัพเดท", "วิธีอัพเดต", "วิธีแก้ไข", "how to update"}
 
 HELP_RESPONSE = """📝 วิธีรายงานการขาย
 
@@ -341,6 +342,25 @@ HELP_RESPONSE = """📝 วิธีรายงานการขาย
 ✅ มูลค่าดีล
 ✅ กิจกรรม (เยี่ยม/โทร/เสนอราคา/ปิดดีล/ส่งซ่อม)
 ✅ สถานะ (สนใจ/นัดเยี่ยม/เยี่ยมแล้ว/เจรจา/ส่ง QT/ประมูล/ปิดได้/เสียงาน)"""
+
+HELP_UPDATE_RESPONSE = """🔄 วิธีอัพเดทดีลเดิม
+
+ใช้ Batch ID (MSG-XXXXX) ที่ได้ตอนรายงาน:
+
+พิมพ์: อัพเดท MSG-XXXXX ตามด้วยข้อมูลใหม่
+
+ตัวอย่าง:
+• อัพเดท MSG-A1B2C สถานะเจรจา ราคา 2.8 ล้าน
+• อัพเดท MSG-A1B2C ปิดดีลได้แล้ว วางมัดจำ 50%
+• อัพเดท MSG-A1B2C เสียงาน ลูกค้าตัดงบ
+• อัพเดท MSG-A1B2C นัดเยี่ยมอังคารหน้า
+
+เปลี่ยนได้ทุกฟิลด์:
+✅ สถานะ / มูลค่าดีล / การชำระเงิน
+✅ วันนัดเยี่ยม / วันประมูล
+✅ เหตุผลปิดงาน / หมายเหตุ
+
+💡 ถ้าจำ Batch ID ไม่ได้ — ลองรายงานซ้ำลูกค้า/สินค้าเดิม ระบบจะแนะนำ Batch ID ให้อัตโนมัติ"""
 
 
 # ---------------------------------------------------------------------------
@@ -1162,6 +1182,10 @@ class handler(BaseHTTPRequestHandler):
 
         if msg_lower in HELP_KEYWORDS:
             reply_to_line(reply_token, HELP_RESPONSE)
+            return
+
+        if msg_lower in HELP_UPDATE_KEYWORDS:
+            reply_to_line(reply_token, HELP_UPDATE_RESPONSE)
             return
 
         # Check for update command: อัพเดท MSG-XXXXX ...
