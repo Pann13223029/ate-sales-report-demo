@@ -1,6 +1,6 @@
 """
 Generate LINE Rich Menu image (2500x843) for ATE Sales Report Bot.
-4 buttons in a 2x2 grid with hand-drawn icons.
+5 buttons: top row (3), bottom row (2).
 
 Usage:
   python3 generate_rich_menu_image.py
@@ -12,8 +12,6 @@ import os
 
 WIDTH = 2500
 HEIGHT = 843
-COLS = 2
-ROWS = 2
 
 # Colors (ATE brand: dark blue base)
 BG_COLOR = (26, 54, 93)
@@ -23,12 +21,22 @@ TEXT_COLOR = (255, 255, 255)
 ICON_COLOR = (130, 180, 255)       # Light blue for icons
 ICON_ACCENT = (100, 220, 160)      # Green accent
 
-# Button definitions
+# Layout: top row = 3 cells, bottom row = 2 cells
+TOP_COLS = 3
+BOT_COLS = 2
+ROW_H = HEIGHT // 2
+TOP_CELL_W = WIDTH // TOP_COLS      # 833
+BOT_CELL_W = WIDTH // BOT_COLS      # 1250
+
+# Button definitions: (thai, english, row, col_index)
 BUTTONS = [
-    ("สรุปยอด", "Monthly Summary"),
-    ("วิธีรายงาน", "How to Report"),
-    ("เปิด Dashboard", "Looker Studio"),
-    ("เปิด Sheets", "Google Sheets"),
+    # Top row
+    {"thai": "สรุปยอด",       "eng": "Summary",        "row": 0, "col": 0, "cols": TOP_COLS},
+    {"thai": "วิธีรายงาน",    "eng": "How to Report",   "row": 0, "col": 1, "cols": TOP_COLS},
+    {"thai": "วิธีอัพเดท",    "eng": "How to Update",   "row": 0, "col": 2, "cols": TOP_COLS},
+    # Bottom row
+    {"thai": "เปิด Dashboard", "eng": "Looker Studio",  "row": 1, "col": 0, "cols": BOT_COLS},
+    {"thai": "เปิด Sheets",    "eng": "Google Sheets",  "row": 1, "col": 1, "cols": BOT_COLS},
 ]
 
 # Find Thai font
@@ -45,8 +53,8 @@ for p in THAI_FONT_PATHS:
         break
 
 try:
-    font_main = ImageFont.truetype(font_path, 60) if font_path else ImageFont.load_default()
-    font_sub = ImageFont.truetype(font_path, 34) if font_path else ImageFont.load_default()
+    font_main = ImageFont.truetype(font_path, 55) if font_path else ImageFont.load_default()
+    font_sub = ImageFont.truetype(font_path, 30) if font_path else ImageFont.load_default()
 except Exception:
     font_main = ImageFont.load_default()
     font_sub = ImageFont.load_default()
@@ -59,7 +67,6 @@ except Exception:
 def draw_bar_chart_icon(draw, cx, cy, size=70):
     """Bar chart icon for สรุปยอด."""
     s = size
-    # Three bars of different heights
     bar_w = s // 5
     gap = bar_w // 2
     total_w = bar_w * 3 + gap * 2
@@ -75,7 +82,6 @@ def draw_bar_chart_icon(draw, cx, cy, size=70):
         bar_h = int(s * h_ratio)
         draw.rectangle([bx, cy + s // 2 - bar_h, bx + bar_w, cy + s // 2], fill=color, outline=None)
 
-    # Base line
     draw.line([(cx - total_w // 2 - 8, cy + s // 2 + 2),
                (cx + total_w // 2 + 8, cy + s // 2 + 2)], fill=ICON_COLOR, width=3)
 
@@ -83,16 +89,13 @@ def draw_bar_chart_icon(draw, cx, cy, size=70):
 def draw_document_icon(draw, cx, cy, size=70):
     """Document with pen icon for วิธีรายงาน."""
     s = size
-    # Document rectangle
     doc_w = s * 2 // 3
     doc_h = s
     x0 = cx - doc_w // 2
     y0 = cy - doc_h // 2
 
-    # Document body
     draw.rounded_rectangle([x0, y0, x0 + doc_w, y0 + doc_h], radius=6, outline=ICON_COLOR, width=3)
 
-    # Text lines inside document
     line_margin = doc_w // 5
     line_y_start = y0 + doc_h // 4
     for i in range(3):
@@ -100,13 +103,32 @@ def draw_document_icon(draw, cx, cy, size=70):
         lw = doc_w - line_margin * 2 if i < 2 else doc_w // 2 - line_margin
         draw.line([(x0 + line_margin, ly), (x0 + line_margin + lw, ly)], fill=ICON_COLOR, width=3)
 
-    # Pencil (small diagonal line at bottom-right corner)
     px = x0 + doc_w + 4
     py = y0 + doc_h - 4
     pen_len = s // 3
     draw.line([(px, py), (px - pen_len, py - pen_len)], fill=ICON_ACCENT, width=4)
-    # Pencil tip
     draw.polygon([(px, py), (px - 5, py - 8), (px - 8, py - 5)], fill=ICON_ACCENT)
+
+
+def draw_refresh_icon(draw, cx, cy, size=70):
+    """Circular arrow icon for วิธีอัพเดท."""
+    s = size
+    half = s // 2
+    # Draw circular arc (approximated with an ellipse outline)
+    bbox = [cx - half, cy - half, cx + half, cy + half]
+    draw.arc(bbox, start=30, end=330, fill=ICON_ACCENT, width=4)
+
+    # Arrowhead at the end of the arc (roughly at 330 degrees = top-right)
+    import math
+    angle = math.radians(330)
+    tip_x = cx + half * math.cos(angle)
+    tip_y = cy - half * math.sin(angle)
+    arrow_size = s // 5
+    draw.polygon([
+        (tip_x, tip_y),
+        (tip_x - arrow_size, tip_y - arrow_size // 2),
+        (tip_x - arrow_size // 3, tip_y + arrow_size),
+    ], fill=ICON_ACCENT)
 
 
 def draw_line_chart_icon(draw, cx, cy, size=70):
@@ -114,23 +136,19 @@ def draw_line_chart_icon(draw, cx, cy, size=70):
     s = size
     half = s // 2
 
-    # Axes
     ax_x = cx - half
     ax_y = cy + half
     draw.line([(ax_x, cy - half), (ax_x, ax_y)], fill=ICON_COLOR, width=3)
     draw.line([(ax_x, ax_y), (cx + half, ax_y)], fill=ICON_COLOR, width=3)
 
-    # Upward trend line with points
     points = [
         (ax_x + s * 0.1, cy + half * 0.5),
         (ax_x + s * 0.35, cy - half * 0.1),
         (ax_x + s * 0.6, cy + half * 0.15),
         (ax_x + s * 0.85, cy - half * 0.65),
     ]
-    # Draw line
     for i in range(len(points) - 1):
         draw.line([points[i], points[i + 1]], fill=ICON_ACCENT, width=4)
-    # Draw dots
     for px, py in points:
         r = 5
         draw.ellipse([px - r, py - r, px + r, py + r], fill=ICON_ACCENT)
@@ -145,26 +163,22 @@ def draw_grid_icon(draw, cx, cy, size=70):
     x1 = cx + half
     y1 = cy + half
 
-    # Outer rectangle
     draw.rounded_rectangle([x0, y0, x1, y1], radius=6, outline=ICON_COLOR, width=3)
 
-    # Header row (filled)
     header_h = s // 4
     draw.rectangle([x0 + 2, y0 + 2, x1 - 2, y0 + header_h], fill=ICON_ACCENT)
 
-    # Vertical lines (3 columns)
     col_w = s // 3
     draw.line([(x0 + col_w, y0 + header_h), (x0 + col_w, y1)], fill=ICON_COLOR, width=2)
     draw.line([(x0 + col_w * 2, y0 + header_h), (x0 + col_w * 2, y1)], fill=ICON_COLOR, width=2)
 
-    # Horizontal lines (rows)
     row_h = (s - header_h) // 3
     for i in range(1, 3):
         ry = y0 + header_h + i * row_h
         draw.line([(x0, ry), (x1, ry)], fill=ICON_COLOR, width=2)
 
 
-ICON_DRAWERS = [draw_bar_chart_icon, draw_document_icon, draw_line_chart_icon, draw_grid_icon]
+ICON_DRAWERS = [draw_bar_chart_icon, draw_document_icon, draw_refresh_icon, draw_line_chart_icon, draw_grid_icon]
 
 
 # ---------------------------------------------------------------------------
@@ -174,17 +188,12 @@ ICON_DRAWERS = [draw_bar_chart_icon, draw_document_icon, draw_line_chart_icon, d
 img = Image.new("RGB", (WIDTH, HEIGHT), BG_COLOR)
 draw = ImageDraw.Draw(img)
 
-cell_w = WIDTH // COLS
-cell_h = HEIGHT // ROWS
-
-for idx, (thai, eng) in enumerate(BUTTONS):
-    col = idx % COLS
-    row = idx // COLS
-
-    x0 = col * cell_w
-    y0 = row * cell_h
+for idx, btn in enumerate(BUTTONS):
+    cell_w = WIDTH // btn["cols"]
+    x0 = btn["col"] * cell_w
+    y0 = btn["row"] * ROW_H
     x1 = x0 + cell_w
-    y1 = y0 + cell_h
+    y1 = y0 + ROW_H
 
     # Cell background
     inner_margin = 6
@@ -196,21 +205,21 @@ for idx, (thai, eng) in enumerate(BUTTONS):
     draw.line([(x0, y1), (x1, y1)], fill=BORDER_COLOR, width=3)
 
     cx = x0 + cell_w // 2
-    cy = y0 + cell_h // 2
+    cy = y0 + ROW_H // 2
 
     # Draw icon (centered above text)
-    icon_cy = cy - 65
-    ICON_DRAWERS[idx](draw, cx, icon_cy, size=80)
+    icon_cy = cy - 55
+    ICON_DRAWERS[idx](draw, cx, icon_cy, size=70)
 
     # Draw Thai label
-    thai_bbox = draw.textbbox((0, 0), thai, font=font_main)
+    thai_bbox = draw.textbbox((0, 0), btn["thai"], font=font_main)
     tw = thai_bbox[2] - thai_bbox[0]
-    draw.text((cx - tw // 2, cy + 20), thai, fill=TEXT_COLOR, font=font_main)
+    draw.text((cx - tw // 2, cy + 15), btn["thai"], fill=TEXT_COLOR, font=font_main)
 
     # Draw English subtitle
-    eng_bbox = draw.textbbox((0, 0), eng, font=font_sub)
+    eng_bbox = draw.textbbox((0, 0), btn["eng"], font=font_sub)
     ew = eng_bbox[2] - eng_bbox[0]
-    draw.text((cx - ew // 2, cy + 85), eng, fill=(170, 190, 215), font=font_sub)
+    draw.text((cx - ew // 2, cy + 75), btn["eng"], fill=(170, 190, 215), font=font_sub)
 
 output_path = os.path.join(os.path.dirname(__file__), "rich_menu.png")
 img.save(output_path, "PNG")

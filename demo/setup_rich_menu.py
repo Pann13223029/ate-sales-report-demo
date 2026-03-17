@@ -99,11 +99,12 @@ def delete_existing_menus():
 
 
 def create_rich_menu():
-    """Create the rich menu with 4 button areas."""
+    """Create the rich menu with 5 button areas (3 top, 2 bottom)."""
 
-    # 2500x843 image, 2x2 grid
-    cell_w = 2500 // 2  # 1250
-    cell_h = 843 // 2   # 421
+    # 2500x843 image
+    row_h = 843 // 2       # 421
+    top_w = 2500 // 3      # 833
+    bot_w = 2500 // 2      # 1250
 
     menu_data = {
         "size": {"width": 2500, "height": 843},
@@ -111,24 +112,29 @@ def create_rich_menu():
         "name": "ATE Sales Bot Menu",
         "chatBarText": "เมนู ATE Sales",
         "areas": [
-            # Top-left: สรุปยอด → sends text
+            # Top-left: สรุปยอด
             {
-                "bounds": {"x": 0, "y": 0, "width": cell_w, "height": cell_h},
+                "bounds": {"x": 0, "y": 0, "width": top_w, "height": row_h},
                 "action": {"type": "message", "text": "สรุปยอด"}
             },
-            # Top-right: วิธีรายงาน → sends text
+            # Top-center: วิธีรายงาน
             {
-                "bounds": {"x": cell_w, "y": 0, "width": cell_w, "height": cell_h},
+                "bounds": {"x": top_w, "y": 0, "width": top_w, "height": row_h},
                 "action": {"type": "message", "text": "วิธีรายงาน"}
+            },
+            # Top-right: วิธีอัพเดท
+            {
+                "bounds": {"x": top_w * 2, "y": 0, "width": top_w, "height": row_h},
+                "action": {"type": "message", "text": "วิธีอัพเดท"}
             },
             # Bottom-left: เปิด Dashboard → URL
             {
-                "bounds": {"x": 0, "y": cell_h, "width": cell_w, "height": cell_h},
+                "bounds": {"x": 0, "y": row_h, "width": bot_w, "height": row_h},
                 "action": {"type": "uri", "uri": DASHBOARD_URL}
             },
             # Bottom-right: เปิด Sheets → URL
             {
-                "bounds": {"x": cell_w, "y": cell_h, "width": cell_w, "height": cell_h},
+                "bounds": {"x": bot_w, "y": row_h, "width": bot_w, "height": row_h},
                 "action": {"type": "uri", "uri": SHEETS_URL}
             },
         ]

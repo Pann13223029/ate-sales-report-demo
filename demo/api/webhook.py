@@ -67,7 +67,7 @@ Return ONLY valid JSON matching this schema:
     {
       "customer_name": "string or null",
       "contact_person": "string or null",
-      "contact_channel": "string or null — actual phone number, email address, LINE ID, or 'เข้าพบ' for in-person visit",
+      "contact_channel": "string — MANDATORY: phone number or email address of the contact person. Must be a real phone number (e.g. 081-234-5678) or email (e.g. weera@ptt.co.th). Never use 'เข้าพบ' or visit/call categories. null only if truly not mentioned.",
       "product_brand": "Megger|Fluke|CRC|Salisbury|SmartWasher|IK Sprayer|HVOP|Other|null",
       "product_name": "string or null",
       "quantity": number or null,
@@ -92,7 +92,7 @@ If is_sales_report is false, return: {"is_sales_report": false, "activities": []
 FEW_SHOT_EXAMPLES = [
     {
         "input": "ไปเยี่ยม PTT วันนี้ เสนอ Megger MTO330 ราคา 150,000",
-        "output": '{"is_sales_report":true,"activities":[{"customer_name":"PTT","contact_person":null,"contact_channel":"เข้าพบ","product_brand":"Megger","product_name":"MTO330","quantity":null,"deal_value_thb":150000,"activity_type":"visit","sales_stage":"quotation_sent","payment_status":null,"planned_visit_date":null,"bidding_date":null,"accompanying_rep":null,"is_training":null,"close_reason":null,"follow_up_notes":null,"summary_en":"Visited PTT, quoted Megger MTO330 at 150K THB"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- เข้าพบลูกค้า: PTT\\n- สินค้า: Megger MTO330\\n- มูลค่า: ฿150,000\\n- สถานะ: เสนอราคาแล้ว"}'
+        "output": '{"is_sales_report":true,"activities":[{"customer_name":"PTT","contact_person":null,"contact_channel":null,"product_brand":"Megger","product_name":"MTO330","quantity":null,"deal_value_thb":150000,"activity_type":"visit","sales_stage":"quotation_sent","payment_status":null,"planned_visit_date":null,"bidding_date":null,"accompanying_rep":null,"is_training":null,"close_reason":null,"follow_up_notes":null,"summary_en":"Visited PTT, quoted Megger MTO330 at 150K THB"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- เข้าพบลูกค้า: PTT\\n- สินค้า: Megger MTO330\\n- มูลค่า: ฿150,000\\n- สถานะ: เสนอราคาแล้ว"}'
     },
     {
         "input": "ปิดดีล Fluke 1770 กับ EGAT แล้ว 450K วางมัดจำ 50%",
@@ -108,7 +108,7 @@ FEW_SHOT_EXAMPLES = [
     },
     {
         "input": "จะไปเยี่ยม IRPC อังคารหน้า เรื่อง Megger MIT525 พาน้องใหม่สมชายไปด้วย",
-        "output": '{"is_sales_report":true,"activities":[{"customer_name":"IRPC","contact_person":null,"contact_channel":"เข้าพบ","product_brand":"Megger","product_name":"MIT525","quantity":null,"deal_value_thb":null,"activity_type":"visit","sales_stage":"plan_to_visit","payment_status":null,"planned_visit_date":"2026-03-17","bidding_date":null,"accompanying_rep":"สมชาย","is_training":true,"close_reason":null,"follow_up_notes":"Planned visit next Tuesday with trainee","summary_en":"Planning to visit IRPC next Tue for Megger MIT525, with trainee"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- นัดเข้าพบ: IRPC (อังคารหน้า)\\n- สินค้า: Megger MIT525\\n- ไปกับ: สมชาย (ฝึกงาน)\\n- สถานะ: นัดเข้าพบ"}'
+        "output": '{"is_sales_report":true,"activities":[{"customer_name":"IRPC","contact_person":null,"contact_channel":null,"product_brand":"Megger","product_name":"MIT525","quantity":null,"deal_value_thb":null,"activity_type":"visit","sales_stage":"plan_to_visit","payment_status":null,"planned_visit_date":"2026-03-17","bidding_date":null,"accompanying_rep":"สมชาย","is_training":true,"close_reason":null,"follow_up_notes":"Planned visit next Tuesday with trainee","summary_en":"Planning to visit IRPC next Tue for Megger MIT525, with trainee"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- นัดเข้าพบ: IRPC (อังคารหน้า)\\n- สินค้า: Megger MIT525\\n- ไปกับ: สมชาย (ฝึกงาน)\\n- สถานะ: นัดเข้าพบ"}'
     },
     {
         "input": "เสียงาน Salisbury ถุงมือกันไฟฟ้าที่ กฟภ. แพ้ราคาเจ้าอื่น มูลค่า 320,000",
@@ -244,6 +244,7 @@ def parse_message(message_text: str) -> dict:
 
 MANDATORY_FIELDS = {
     "customer_name": "ชื่อลูกค้า",
+    "contact_channel": "เบอร์โทร/อีเมล ผู้ติดต่อ",
     "product_brand": "สินค้า/แบรนด์",
     "deal_value_thb": "มูลค่าดีล",
     "activity_type": "ประเภทกิจกรรม",
@@ -253,7 +254,7 @@ MANDATORY_FIELDS = {
 # Fields exempt from mandatory check (service entries don't need sales_stage/deal_value)
 SERVICE_ACTIVITY_TYPES = {"sent_to_service"}
 
-EXAMPLE_MESSAGE = "ตัวอย่าง: ไปเยี่ยม PTT เสนอ Megger MTO330 ราคา 150,000 สถานะเจรจา"
+EXAMPLE_MESSAGE = "ตัวอย่าง: ไปเยี่ยม PTT คุณวีระ 081-234-5678 เสนอ Megger MTO330 ราคา 150,000 สถานะเจรจา"
 
 
 def build_nudge_confirmation(parsed: dict, ai_confirmation: str) -> str:
@@ -319,25 +320,25 @@ HELP_RESPONSE = """📝 วิธีรายงานการขาย
 พิมพ์ข้อความรายงานเข้ามาได้เลยครับ ระบบจะบันทึกให้อัตโนมัติ
 
 ตัวอย่างรายงาน:
-• ไปเยี่ยม PTT เสนอ Megger MTO330 ราคา 150,000 สถานะเจรจา
-• โทรคุย EGAT เรื่อง Fluke 1770 ลูกค้าสนใจ งบ 520,000
-• ปิดดีล SCG Salisbury ถุงมือ 15 ชุด 975,000 วางมัดจำ 50%
-• จะไปเยี่ยม IRPC อังคารหน้า เรื่อง Megger MIT525
-• ส่ง Megger MTO330 ของ PTT เข้าซ่อม warranty
-• ยื่นซองประมูล กฟภ. Megger MIT525 2.1 ล้าน เปิดซอง 25 มี.ค.
-• เสียงาน Thai Oil MIT1025 ลูกค้าตัดงบ
+• ไปเยี่ยม PTT คุณวีระ 081-234-5678 เสนอ Megger MTO330 ราคา 150,000 สถานะเจรจา
+• โทรคุย EGAT คุณสุรศักดิ์ surasak@egat.co.th เรื่อง Fluke 1770 งบ 520,000
+• ปิดดีล SCG คุณอภิชาติ 084-567-8901 Salisbury ถุงมือ 15 ชุด 975,000 วางมัดจำ 50%
+• จะไปเยี่ยม IRPC คุณประยุทธ์ prayuth@irpc.co.th เรื่อง Megger MIT525
+• ส่ง Megger MTO330 ของ PTT คุณวีระ 081-234-5678 เข้าซ่อม warranty
+• ยื่นซองประมูล กฟภ. procurement@pea.co.th Megger MIT525 2.1 ล้าน เปิดซอง 25 มี.ค.
 
 อัพเดทดีลเดิม:
 • พิมพ์: อัพเดท MSG-XXXXX ตามด้วยข้อมูลใหม่
 • ตัวอย่าง: อัพเดท MSG-A1B2C สถานะเจรจา ราคา 2.8 ล้าน
-• ถ้ารายงานซ้ำลูกค้า/สินค้าเดิม ระบบจะแนะนำ Batch ID ให้
 
 คำสั่งอื่นๆ:
 • สรุป — ดูสรุป pipeline
+• วิธีอัพเดท — ดูวิธีอัพเดทดีล
 • วิธีใช้ — ดูข้อความนี้
 
-ข้อมูลสำคัญ 5 อย่าง:
+ข้อมูลสำคัญ 6 อย่าง:
 ✅ ชื่อลูกค้า
+✅ เบอร์โทร/อีเมล ผู้ติดต่อ (จำเป็น!)
 ✅ สินค้า/แบรนด์ (Megger, Fluke, CRC, Salisbury, SmartWasher, IK Sprayer, HVOP)
 ✅ มูลค่าดีล
 ✅ กิจกรรม (เยี่ยม/โทร/เสนอราคา/ปิดดีล/ส่งซ่อม)
