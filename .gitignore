@@ -1,6 +1,7 @@
 .DS_Store
 .env
 *.json
+!vercel.json
 !demo/vercel.json
 !demo/package.json
 __pycache__/
