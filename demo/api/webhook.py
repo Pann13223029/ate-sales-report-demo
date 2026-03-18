@@ -1207,6 +1207,21 @@ class handler(BaseHTTPRequestHandler):
             if not parsed.get("is_sales_report", False):
                 return
 
+            # Step 1b: Block if contact_channel is missing (mandatory)
+            activities = parsed.get("activities", [])
+            needs_contact = [
+                a for a in activities
+                if a.get("activity_type") not in SERVICE_ACTIVITY_TYPES
+                and not a.get("contact_channel")
+            ]
+            if needs_contact:
+                reject_msg = ("⚠️ กรุณาระบุเบอร์โทรหรืออีเมลของผู้ติดต่อด้วยนะครับ "
+                              "ระบบยังไม่ได้บันทึกข้อมูลนี้\n\n"
+                              "กรุณาส่งใหม่พร้อมเบอร์โทร/อีเมล เช่น:\n"
+                              "ไปเยี่ยม PTT คุณวีระ 081-234-5678 เสนอ Megger MTO330 ราคา 150,000 สถานะเจรจา")
+                reply_to_line(reply_token, reject_msg)
+                return
+
             # Step 2: Write to Google Sheets
             sheets_ok = False
             matches = []
@@ -1228,7 +1243,7 @@ class handler(BaseHTTPRequestHandler):
             if matches:
                 match_note = "\n\n📋 พบดีลที่อาจตรงกัน:"
                 for m in matches:
-                    val_str = f"฿{float(m['value']):,.0f}" if m['value'] else "—"
+                    val_str = f"฿{float(str(m['value']).replace(',', '')):,.0f}" if m['value'] else "—"
                     match_note += (f"\n• {m['batch_id']} | {m['customer']} / "
                                    f"{m['brand']} {m['product']} / {val_str} / {m['stage']}")
                 match_note += "\n\nถ้าต้องการอัพเดทดีลเดิม พิมพ์: อัพเดท [Batch ID] ตามด้วยข้อมูลใหม่"
@@ -1240,6 +1255,6 @@ class handler(BaseHTTPRequestHandler):
             print(f"[ERROR] {type(e).__name__}: {e}")
             sys.stdout.flush()
             try:
-                reply_to_line(reply_token, f"ขออภัยครับ ระบบขัดข้อง กรุณาลองใหม่อีกครั้ง")
+                reply_to_line(reply_token, "ขออภัยครับ ระบบขัดข้อง กรุณาลองใหม่อีกครั้ง")
             except Exception:
                 pass
