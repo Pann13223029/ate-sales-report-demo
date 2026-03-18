@@ -1,7 +1,8 @@
 # ATE Sales Report System — Phase 2 Implementation Plan
 
 > **Created:** 2026-03-15
-> **Status:** In Progress
+> **Completed:** 2026-03-18
+> **Status:** Complete — all features implemented in `demo/api/webhook.py`
 > **Context:** Requirements gathered from demo feedback (Mar 14) + expert panel consensus (Mar 15)
 
 ---
@@ -26,21 +27,21 @@
 
 | # | Feature | Category | Status |
 |---|---------|----------|--------|
-| 1 | Visit stage: `visited`, `plan_to_visit` (with date) | Sales Stage | Pending |
-| 2 | 7-day stale deal push notification to reps | Automation | Pending |
-| 3 | Payment status: rename `partial` → `deposit` | Schema | Pending |
-| 4 | Add Contact Channel column (phone, email, visit) | Schema | Pending |
-| 5 | Individual sheet per rep + combined auto-sheet | Architecture | Pending |
-| 6 | Visibility control: rep sees only own sheet, management sees all | Permissions | Pending |
-| 7 | Separate "Major Opportunity" sheet for Megger | New Sheet | Pending |
-| 8 | Service/warranty activity type (`sent_to_service`, no sales stage) | Activity Type | Pending |
-| 9 | Switch to 1-on-1 LINE reporting (no group chat) | LINE Config | Pending |
-| 10 | Training flag (Accompanying Rep + auto-flag) | New Columns | Pending |
-| 11 | Equipment Defect sales stage | Sales Stage | Pending |
-| 12 | `job_expired` stage + hide from main dashboard | Sales Stage | Pending |
-| 13 | Close Reason (AI-filled) + Manager Notes (manual) | New Columns | Pending |
-| 14 | `bidding` stage + Bidding Date column (government procurement) | Sales Stage + Column | Pending |
-| 15 | Add HVOP (KATO tech) to product brands | Brand List | Pending |
+| 1 | Visit stage: `visited`, `plan_to_visit` (with date) | Sales Stage | Done |
+| 2 | 7-day stale deal push notification to reps | Automation | Done |
+| 3 | Payment status: rename `partial` → `deposit` | Schema | Done |
+| 4 | Add Contact Channel column (phone, email, visit) | Schema | Done |
+| 5 | Individual sheet per rep + combined auto-sheet | Architecture | Done |
+| 6 | Visibility control: rep sees only own sheet, management sees all | Permissions | Done |
+| 7 | Separate "Major Opportunity" sheet for Megger | New Sheet | Done |
+| 8 | Service/warranty activity type (`sent_to_service`, no sales stage) | Activity Type | Done |
+| 9 | Switch to 1-on-1 LINE reporting (no group chat) | LINE Config | Done |
+| 10 | Training flag (Accompanying Rep + auto-flag) | New Columns | Done |
+| 11 | Equipment Defect sales stage | Sales Stage | Done |
+| 12 | `job_expired` stage + hide from main dashboard | Sales Stage | Done |
+| 13 | Close Reason (AI-filled) + Manager Notes (manual) | New Columns | Done |
+| 14 | `bidding` stage + Bidding Date column (government procurement) | Sales Stage + Column | Done |
+| 15 | Add HVOP (KATO tech) to product brands | Brand List | Done |
 | 16 | Product segment auto-match from product name | Future (data pending) | Postponed |
 
 ---
@@ -295,16 +296,16 @@ Shows:
 
 | # | Task | Effort | Dependencies | Status |
 |---|------|--------|-------------|--------|
-| 1 | Update schema (24 columns) + AI prompt | 2 hrs | None | Pending |
-| 2 | Update `populate_sample_data.py` for new schema | 1 hr | Task 1 | Pending |
-| 3 | Individual sheets + combined + protection | 2 hrs | Task 1 | Pending |
-| 4 | Major Opportunity auto-copy (Megger) | 30 min | Task 3 | Pending |
-| 5 | Update entry (`อัพเดท MSG-XXXXX`) | 2 hrs | Task 1 | Pending |
-| 6 | Smart match detection on plain messages | 1 hr | Task 5 | Pending |
-| 7 | Stale deal push (`/api/stale-check`) | 2 hrs | Task 3 | Pending |
-| 8 | Update Rich Menu help text | 15 min | Task 5 | Pending |
-| 9 | Dashboard configuration guide | 1 hr | Task 1 | Pending |
-| 10 | Deploy + test | 30 min | All | Pending |
+| 1 | Update schema (24 columns) + AI prompt | 2 hrs | None | Done |
+| 2 | Update `populate_sample_data.py` for new schema | 1 hr | Task 1 | Done |
+| 3 | Individual sheets + combined + protection | 2 hrs | Task 1 | Done |
+| 4 | Major Opportunity auto-copy (Megger) | 30 min | Task 3 | Done |
+| 5 | Update entry (`อัพเดท MSG-XXXXX`) | 2 hrs | Task 1 | Done |
+| 6 | Smart match detection on plain messages | 1 hr | Task 5 | Done |
+| 7 | Stale deal push (`/api/stale-check`) | 2 hrs | Task 3 | Done |
+| 8 | Update Rich Menu help text | 15 min | Task 5 | Done |
+| 9 | Dashboard configuration guide | 1 hr | Task 1 | Done |
+| 10 | Deploy + test | 30 min | All | Done |
 
 **Total estimated: ~12 hours**
 
@@ -315,3 +316,4 @@ Shows:
 | Date | Change |
 |------|--------|
 | 2026-03-15 | Document created from demo feedback + expert panel consensus |
+| 2026-03-18 | All 15 features implemented and deployed (feature #16 remains postponed) |

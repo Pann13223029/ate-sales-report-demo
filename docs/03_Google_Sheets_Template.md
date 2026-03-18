@@ -1,6 +1,6 @@
 # ATE Sales Report — Google Sheets Structure
 
-> **Purpose:** Flat 17-column Google Sheets workbook serving as database and Looker Studio data source.
+> **Purpose:** Flat 24-column Google Sheets workbook serving as database and Looker Studio data source.
 > **Design:** Single-table structure with dual-write (Sheet1 for demo + Live Data for permanence).
 > **Date:** 2026-03-14
 
@@ -18,7 +18,7 @@
   │  Sheet1            │  │  Live Data         │  │  Legend   │  │  Backup_*    │
   │  (demo/dashboard)  │  │  (permanent)       │  │  (color  │  │  (timestamped│
   │                    │  │                    │  │  ref)    │  │   max 3)     │
-  │  Same 17-col       │  │  Same 17-col       │  │          │  │              │
+  │  Same 24-col       │  │  Same 24-col       │  │          │  │              │
   │  structure as      │  │  structure, never   │  │          │  │  Auto-created│
   │  Live Data         │  │  cleared for demos  │  │          │  │  before data │
   │                    │  │                    │  │          │  │  reset       │
@@ -47,7 +47,7 @@
 
 ---
 
-## 17-Column Structure (A-Q)
+## 24-Column Structure (A-X)
 
 All data tabs (Sheet1, Live Data, Backup_*) share the same column layout.
 
@@ -59,21 +59,28 @@ All data tabs (Sheet1, Live Data, Backup_*) share the same column layout.
 | B | Rep Name | String | LINE display name of the sales rep | `สมชาย` |
 | C | Customer | String | Company name as stated by rep | `PTT` |
 | D | Contact Person | String | Customer contact name (if mentioned) | `คุณวิทยา` |
-| E | Product Brand | String | Brand from ATE portfolio | `Megger` |
-| F | Product Name | String | Product or model mentioned | `MTO330` |
-| G | Quantity | Number | Quantity discussed or ordered | `2` |
-| H | Deal Value (THB) | Number | Deal value in Baht, comma-formatted | `285,000` |
-| I | Activity Type | String | Type of sales activity | `visit` |
-| J | Sales Stage | String | Pipeline stage | `quotation_sent` |
-| K | Payment Status | String | Payment state | `pending` |
-| L | Follow-up Notes | String | AI-extracted notes or action items | `รอ PO สัปดาห์หน้า` |
-| M | Summary (EN) | String | Brief English summary, under 100 chars | `Visited PTT, quoted Megger MTO330 at 285K` |
-| N | Raw Message | String | Original LINE message text (audit trail) | `ไปเยี่ยม PTT วันนี้...` |
-| O | Batch ID | String | `MSG-XXXXX` hash grouping multi-activity messages | `MSG-A3F2B` |
-| P | Item # | String | Position label for multi-activity messages | `1/3` |
-| Q | Source | String | Origin of the row | `live` or `sample` |
+| E | Contact Channel | String | Phone number or email of contact person (**mandatory**) | `081-234-5678` |
+| F | Product Brand | String | Brand from ATE portfolio | `Megger` |
+| G | Product Name | String | Product or model mentioned | `MTO330` |
+| H | Quantity | Number | Quantity discussed or ordered | `2` |
+| I | Deal Value (THB) | Number | Deal value in Baht, comma-formatted | `285,000` |
+| J | Activity Type | String | Type of sales activity | `visit` |
+| K | Sales Stage | String | Pipeline stage | `quotation_sent` |
+| L | Payment Status | String | Payment state | `pending` |
+| M | Planned Visit Date | Date | Date of planned future visit (`YYYY-MM-DD`) | `2026-03-20` |
+| N | Bidding Date | Date | Government bid submission deadline (`YYYY-MM-DD`) | `2026-04-01` |
+| O | Accompanying Rep | String | Name of 2nd rep if mentioned | `น้องใหม่` |
+| P | Training Flag | String | Auto-set `yes` when accompanying rep is a trainee | `yes` |
+| Q | Close Reason | String | AI-filled reason for close/loss/expiry/defect (terminal stages only) | `ลูกค้าเลือกคู่แข่ง` |
+| R | Follow-up Notes | String | AI-extracted notes or action items | `รอ PO สัปดาห์หน้า` |
+| S | Summary (EN) | String | Brief English summary, under 100 chars | `Visited PTT, quoted Megger MTO330 at 285K` |
+| T | Raw Message | String | Original LINE message text (audit trail) | `ไปเยี่ยม PTT วันนี้...` |
+| U | Batch ID | String | `MSG-XXXXX` hash grouping multi-activity messages | `MSG-A3F2B` |
+| V | Item # | String | Position label for multi-activity messages | `1/3` |
+| W | Source | String | Origin of the row | `live` or `sample` |
+| X | Manager Notes | String | Blank — for management manual input only | |
 
-Multi-activity messages share the same Batch ID (col O) and Raw Message (col N). Item # (col P) labels each entry (e.g., `1/2`, `2/2`). Single-activity messages leave Item # blank.
+Multi-activity messages share the same Batch ID (col U) and Raw Message (col T). Item # (col V) labels each entry (e.g., `1/2`, `2/2`). Single-activity messages leave Item # blank.
 
 ---
 
@@ -83,10 +90,10 @@ Applied to data columns starting from row 2 onward.
 
 | Column | Dropdown Values |
 |---|---|
-| E (Product Brand) | Megger, Fluke, CRC, Salisbury, SmartWasher, IK Sprayer, Other |
-| I (Activity Type) | visit, call, quotation, follow_up, closed_won, closed_lost, other |
-| J (Sales Stage) | lead, negotiation, quotation_sent, closed_won, closed_lost |
-| K (Payment Status) | pending, partial, paid |
+| F (Product Brand) | Megger, Fluke, CRC, Salisbury, SmartWasher, IK Sprayer, HVOP, Other |
+| J (Activity Type) | visit, call, quotation, follow_up, closed_won, closed_lost, sent_to_service, other |
+| K (Sales Stage) | lead, plan_to_visit, visited, negotiation, quotation_sent, bidding, closed_won, closed_lost, job_expired, equipment_defect |
+| L (Payment Status) | pending, deposit, paid |
 
 ---
 
@@ -94,7 +101,7 @@ Applied to data columns starting from row 2 onward.
 
 Cell-only coloring (not full-row) is applied to three columns. Colors make pipeline status scannable at a glance.
 
-### Activity Type (Column I)
+### Activity Type (Column J)
 
 | Value | Color |
 |---|---|
@@ -104,29 +111,35 @@ Cell-only coloring (not full-row) is applied to three columns. Colors make pipel
 | follow_up | Light purple |
 | closed_won | Green |
 | closed_lost | Light red |
+| sent_to_service | Light cyan |
 | other | Light gray |
 
-### Sales Stage (Column J)
+### Sales Stage (Column K)
 
 | Value | Color |
 |---|---|
 | lead | Light blue |
+| plan_to_visit | Light cyan |
+| visited | Light teal |
 | negotiation | Light orange |
 | quotation_sent | Light yellow |
+| bidding | Light purple |
 | closed_won | Green |
 | closed_lost | Red |
+| job_expired | Gray |
+| equipment_defect | Dark red |
 
-### Payment Status (Column K)
+### Payment Status (Column L)
 
 | Value | Color |
 |---|---|
 | pending | Light yellow |
-| partial | Light orange |
+| deposit | Light orange |
 | paid | Light green |
 
 ### Partial Data Highlighting
 
-Rows missing mandatory fields (Customer, Product Brand, Deal Value, Activity Type, Sales Stage) are highlighted with a light red background on the empty cells. This is applied by `populate_sample_data.py` when generating sample data.
+Rows missing mandatory fields (Customer, Contact Channel, Product Brand, Deal Value, Activity Type, Sales Stage) are highlighted with a light red background on the empty cells. This is applied by `populate_sample_data.py` when generating sample data.
 
 ---
 
@@ -134,9 +147,9 @@ Rows missing mandatory fields (Customer, Product Brand, Deal Value, Activity Typ
 
 | Column | Format / Notes |
 |---|---|
-| H (Deal Value) | `#,##0` — comma separator, no decimals |
-| G (Quantity) | Plain number |
-| Q (Source) | `live` = bot webhook, `sample` = generated for demo. Allows Looker Studio filtering. |
+| I (Deal Value) | `#,##0` — comma separator, no decimals |
+| H (Quantity) | Plain number |
+| W (Source) | `live` = bot webhook, `sample` = generated for demo. Allows Looker Studio filtering. |
 
 ---
 

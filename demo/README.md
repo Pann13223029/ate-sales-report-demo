@@ -38,35 +38,36 @@ Phone (LINE) → Vercel (Python) → Gemini AI → Google Sheets → Looker Stud
 | **Legend** | Color coding reference | `populate_sample_data.py` |
 | **Backup_*** | Timestamped backups (max 3) | `populate_sample_data.py` |
 
-### Columns (A–Q, 17 total)
+### Columns (A–X, 24 total)
 
 ```
-A: Timestamp           I: Activity Type       Q: Source (live/sample)
-B: Rep Name            J: Sales Stage
-C: Customer            K: Payment Status
-D: Contact Person      L: Follow-up Notes
-E: Product Brand       M: Summary (EN)
-F: Product Name        N: Raw Message
-G: Quantity            O: Batch ID
-H: Deal Value (THB)    P: Item #
+A: Timestamp           I: Deal Value (THB)    Q: Close Reason
+B: Rep Name            J: Activity Type       R: Follow-up Notes
+C: Customer            K: Sales Stage         S: Summary (EN)
+D: Contact Person      L: Payment Status      T: Raw Message
+E: Contact Channel     M: Planned Visit Date  U: Batch ID
+F: Product Brand       N: Bidding Date        V: Item #
+G: Product Name        O: Accompanying Rep    W: Source (live/sample)
+H: Quantity            P: Training Flag       X: Manager Notes
 ```
 
 ### Mandatory Fields (nudge triggers)
 
 1. Customer Name
-2. Product Brand
-3. Deal Value (THB)
-4. Activity Type
-5. Sales Stage
+2. Contact Channel (phone/email)
+3. Product Brand
+4. Deal Value (THB)
+5. Activity Type
+6. Sales Stage
 
 ### Data Validation Dropdowns
 
 | Column | Options |
 |--------|---------|
-| Product Brand | Megger, Fluke, CRC, Salisbury, SmartWasher, IK Sprayer, Other |
-| Activity Type | visit, call, quotation, follow_up, closed_won, closed_lost, other |
-| Sales Stage | lead, negotiation, quotation_sent, closed_won, closed_lost |
-| Payment Status | pending, partial, paid |
+| Product Brand | Megger, Fluke, CRC, Salisbury, SmartWasher, IK Sprayer, HVOP, Other |
+| Activity Type | visit, call, quotation, follow_up, closed_won, closed_lost, sent_to_service, other |
+| Sales Stage | lead, plan_to_visit, visited, negotiation, quotation_sent, bidding, closed_won, closed_lost, job_expired, equipment_defect |
+| Payment Status | pending, deposit, paid |
 
 ## Quick Setup
 
@@ -180,7 +181,7 @@ python3 populate_sample_data.py --restore    # Restore from latest backup
 
 ## Nudge System
 
-The bot checks 5 mandatory fields after each message. Based on how many are missing:
+The bot checks 6 mandatory fields after each message (service activities exempt). Based on how many are missing:
 
 | Missing | Response |
 |---------|----------|
@@ -207,7 +208,8 @@ The nudge tone is soft: "ถ้าสะดวก ครั้งหน้าแ
 ```
 demo/
 ├── api/
-│   └── webhook.py              # Main serverless function (LINE → Gemini → Sheets → Reply)
+│   ├── webhook.py              # Main serverless function (LINE → Gemini → Sheets → Reply)
+│   └── stale_check.py          # Stale deal scan + push notifications
 ├── populate_sample_data.py     # Generate 31 sample rows + formatting + backup system
 ├── vercel.json                 # Vercel routing config
 ├── requirements.txt            # Python dependencies (gspread, google-auth)

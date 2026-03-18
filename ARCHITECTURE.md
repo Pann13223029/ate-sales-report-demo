@@ -324,10 +324,12 @@ Used for stale deal alerts only. Requires LINE user_id from Rep Registry tab. Fr
 **Platform:** Vercel (Hobby plan, free)
 
 **Configuration:**
-- Root `vercel.json` sets `"rootDirectory": "demo"`
-- `demo/vercel.json` defines builds and routes:
-  - `api/webhook.py` → `@vercel/python`
-  - `api/stale_check.py` → `@vercel/python`
+- Root `vercel.json` defines builds and routes pointing into `demo/api/`:
+  - `demo/api/webhook.py` → `@vercel/python` (maxLambdaSize: 15mb)
+  - `demo/api/stale_check.py` → `@vercel/python` (maxLambdaSize: 15mb)
+  - Routes: `/api/webhook` → `demo/api/webhook.py`, `/api/stale-check` → `demo/api/stale_check.py`
+- Root `requirements.txt` mirrors `demo/requirements.txt` (gspread + google-auth)
+- `demo/vercel.json` also exists for local `vercel dev` usage
 - Auto-deploy on push via GitHub integration
 
 **URL:** `https://ate-sales-demo.vercel.app`
@@ -354,7 +356,8 @@ Used for stale deal alerts only. Requires LINE user_id from Rep Registry tab. Fr
 
 ```
 ate_sales_report_system_planning/
-├── vercel.json                      # Root: sets rootDirectory to demo/
+├── vercel.json                      # Root: builds + routes pointing to demo/api/
+├── requirements.txt                 # Root: gspread + google-auth (for Vercel build)
 ├── .github/
 │   └── workflows/
 │       └── stale-check.yml          # Weekly cron trigger
@@ -362,7 +365,7 @@ ate_sales_report_system_planning/
 │   ├── vercel.json                  # Builds + routes config
 │   ├── requirements.txt             # gspread + google-auth
 │   ├── api/
-│   │   ├── webhook.py               # Main serverless function (1261 lines)
+│   │   ├── webhook.py               # Main serverless function (1260 lines)
 │   │   └── stale_check.py           # Stale deal endpoint (264 lines)
 │   ├── populate_sample_data.py      # Sample data + sheet formatting
 │   ├── generate_rich_menu_image.py  # Rich menu PNG generator
