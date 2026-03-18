@@ -7,7 +7,7 @@ Run once after deployment:
 Requires:
   - LINE_CHANNEL_ACCESS_TOKEN in .env or environment
   - rich_menu.png in same directory
-  - Looker Studio dashboard URL (will prompt if not set)
+  - Google Sheets URL
 """
 
 import os
@@ -21,7 +21,6 @@ import urllib.request
 TOKEN = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN", "")
 
 # URLs — update these with your actual URLs
-DASHBOARD_URL = os.environ.get("DASHBOARD_URL", "https://lookerstudio.google.com/reporting/9a4b326f-4f51-4f85-be2f-2bf8e958a9ec")
 SHEETS_URL = os.environ.get("SHEETS_URL", "https://docs.google.com/spreadsheets/d/1N8urzMgcVBjJ3iv5ACPtMP-pG70rtlaHQ6v3iTJ48wY/edit")
 
 if not TOKEN:
@@ -37,12 +36,6 @@ if not TOKEN:
         print("ERROR: LINE_CHANNEL_ACCESS_TOKEN not found.")
         print("Set it as environment variable or in .env file.")
         exit(1)
-
-if not DASHBOARD_URL:
-    DASHBOARD_URL = input("Enter your Looker Studio dashboard URL: ").strip()
-    if not DASHBOARD_URL:
-        DASHBOARD_URL = "https://lookerstudio.google.com"
-        print(f"Using default: {DASHBOARD_URL}")
 
 
 def api_call(method, path, data=None, content_type="application/json"):
@@ -99,12 +92,10 @@ def delete_existing_menus():
 
 
 def create_rich_menu():
-    """Create the rich menu with 5 button areas (3 top, 2 bottom)."""
+    """Create the rich menu with 3 buttons in a single row."""
 
-    # 2500x843 image
-    row_h = 843 // 2       # 421
-    top_w = 2500 // 3      # 833
-    bot_w = 2500 // 2      # 1250
+    # 2500x843 image, 3 equal columns
+    cell_w = 2500 // 3     # 833
 
     menu_data = {
         "size": {"width": 2500, "height": 843},
@@ -112,29 +103,19 @@ def create_rich_menu():
         "name": "ATE Sales Bot Menu",
         "chatBarText": "เมนู ATE Sales",
         "areas": [
-            # Top-left: สรุปยอด
+            # Left: วิธีรายงาน
             {
-                "bounds": {"x": 0, "y": 0, "width": top_w, "height": row_h},
-                "action": {"type": "message", "text": "สรุปยอด"}
-            },
-            # Top-center: วิธีรายงาน
-            {
-                "bounds": {"x": top_w, "y": 0, "width": top_w, "height": row_h},
+                "bounds": {"x": 0, "y": 0, "width": cell_w, "height": 843},
                 "action": {"type": "message", "text": "วิธีรายงาน"}
             },
-            # Top-right: วิธีอัพเดท
+            # Center: วิธีอัพเดท
             {
-                "bounds": {"x": top_w * 2, "y": 0, "width": top_w, "height": row_h},
+                "bounds": {"x": cell_w, "y": 0, "width": cell_w, "height": 843},
                 "action": {"type": "message", "text": "วิธีอัพเดท"}
             },
-            # Bottom-left: เปิด Dashboard → URL
+            # Right: เปิด Sheets → URL
             {
-                "bounds": {"x": 0, "y": row_h, "width": bot_w, "height": row_h},
-                "action": {"type": "uri", "uri": DASHBOARD_URL}
-            },
-            # Bottom-right: เปิด Sheets → URL
-            {
-                "bounds": {"x": bot_w, "y": row_h, "width": bot_w, "height": row_h},
+                "bounds": {"x": cell_w * 2, "y": 0, "width": cell_w, "height": 843},
                 "action": {"type": "uri", "uri": SHEETS_URL}
             },
         ]

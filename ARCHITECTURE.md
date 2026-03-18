@@ -254,18 +254,16 @@ Keywords checked in order (case-insensitive):
 4. **Update command:** regex `^(อัพเดท|อัพเดต|update|แก้ไข)\s+(MSG-[A-Za-z0-9]+)\s*(.*)`
 5. **Sales report:** everything else → AI parsing pipeline
 
-### 9.3 Rich Menu (5 buttons)
+### 9.3 Rich Menu (3 buttons)
 
-Asymmetric layout on 2500x843 canvas:
+Single-row layout on 2500x843 canvas:
 ```
 ┌──────────┬──────────┬──────────┐
-│ สรุปยอด  │ วิธีรายงาน │ วิธีอัพเดท │  (top: 3 × 833px)
-├───────────────┬───────────────┤
-│ เปิด Dashboard │ เปิด Sheets  │  (bottom: 2 × 1250px)
-└───────────────┴───────────────┘
+│ วิธีรายงาน │ วิธีอัพเดท │ เปิด Sheets │  (3 × 833px)
+└──────────┴──────────┴──────────┘
 ```
-- Top 3: message actions (send keyword text)
-- Bottom 2: URI actions (open Looker Studio / Google Sheets)
+- Left 2: message actions (send keyword text)
+- Right: URI action (open Google Sheets)
 
 ### 9.4 Push Notifications
 

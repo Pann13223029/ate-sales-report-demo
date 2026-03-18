@@ -1,6 +1,6 @@
 """
 Generate LINE Rich Menu image (2500x843) for ATE Sales Report Bot.
-5 buttons: top row (3), bottom row (2).
+3 buttons in a single row.
 
 Usage:
   python3 generate_rich_menu_image.py
@@ -21,22 +21,15 @@ TEXT_COLOR = (255, 255, 255)
 ICON_COLOR = (130, 180, 255)       # Light blue for icons
 ICON_ACCENT = (100, 220, 160)      # Green accent
 
-# Layout: top row = 3 cells, bottom row = 2 cells
-TOP_COLS = 3
-BOT_COLS = 2
-ROW_H = HEIGHT // 2
-TOP_CELL_W = WIDTH // TOP_COLS      # 833
-BOT_CELL_W = WIDTH // BOT_COLS      # 1250
+# Layout: single row, 3 equal cells
+NUM_COLS = 3
+CELL_W = WIDTH // NUM_COLS          # 833
 
-# Button definitions: (thai, english, row, col_index)
+# Button definitions
 BUTTONS = [
-    # Top row
-    {"thai": "สรุปยอด",       "eng": "Summary",        "row": 0, "col": 0, "cols": TOP_COLS},
-    {"thai": "วิธีรายงาน",    "eng": "How to Report",   "row": 0, "col": 1, "cols": TOP_COLS},
-    {"thai": "วิธีอัพเดท",    "eng": "How to Update",   "row": 0, "col": 2, "cols": TOP_COLS},
-    # Bottom row
-    {"thai": "เปิด Dashboard", "eng": "Looker Studio",  "row": 1, "col": 0, "cols": BOT_COLS},
-    {"thai": "เปิด Sheets",    "eng": "Google Sheets",  "row": 1, "col": 1, "cols": BOT_COLS},
+    {"thai": "วิธีรายงาน",    "eng": "How to Report",   "col": 0},
+    {"thai": "วิธีอัพเดท",    "eng": "How to Update",   "col": 1},
+    {"thai": "เปิด Sheets",    "eng": "Google Sheets",  "col": 2},
 ]
 
 # Find Thai font
@@ -178,7 +171,7 @@ def draw_grid_icon(draw, cx, cy, size=70):
         draw.line([(x0, ry), (x1, ry)], fill=ICON_COLOR, width=2)
 
 
-ICON_DRAWERS = [draw_bar_chart_icon, draw_document_icon, draw_refresh_icon, draw_line_chart_icon, draw_grid_icon]
+ICON_DRAWERS = [draw_document_icon, draw_refresh_icon, draw_grid_icon]
 
 
 # ---------------------------------------------------------------------------
@@ -189,11 +182,10 @@ img = Image.new("RGB", (WIDTH, HEIGHT), BG_COLOR)
 draw = ImageDraw.Draw(img)
 
 for idx, btn in enumerate(BUTTONS):
-    cell_w = WIDTH // btn["cols"]
-    x0 = btn["col"] * cell_w
-    y0 = btn["row"] * ROW_H
-    x1 = x0 + cell_w
-    y1 = y0 + ROW_H
+    x0 = btn["col"] * CELL_W
+    y0 = 0
+    x1 = x0 + CELL_W
+    y1 = HEIGHT
 
     # Cell background
     inner_margin = 6
@@ -202,10 +194,9 @@ for idx, btn in enumerate(BUTTONS):
 
     # Border lines
     draw.line([(x1, y0), (x1, y1)], fill=BORDER_COLOR, width=3)
-    draw.line([(x0, y1), (x1, y1)], fill=BORDER_COLOR, width=3)
 
-    cx = x0 + cell_w // 2
-    cy = y0 + ROW_H // 2
+    cx = x0 + CELL_W // 2
+    cy = HEIGHT // 2
 
     # Draw icon (centered above text)
     icon_cy = cy - 55
