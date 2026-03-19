@@ -13,6 +13,7 @@ import re
 import urllib.request
 from http.server import BaseHTTPRequestHandler
 from datetime import datetime, timezone, timedelta
+from megger_segments import lookup_segment
 
 # NOTE: google.generativeai, gspread, google.oauth2 are imported lazily
 # inside functions to avoid module-level import errors on Vercel
@@ -514,6 +515,15 @@ Return ONLY valid JSON with changed fields. Do NOT include unchanged fields."""
             col = header_to_col[header_name]
             cell_updates.append((col, str(new_value) if new_value is not None else ""))
 
+    # Re-match Product Segment if product changed
+    if "product_name" in changes or "product_brand" in changes:
+        brand = changes.get("product_brand") or existing_data.get("Product Brand", "")
+        name = changes.get("product_name") or existing_data.get("Product Name", "")
+        new_segment = lookup_segment(brand, name)
+        segment_col = header_to_col.get("Product Segment")
+        if segment_col:
+            cell_updates.append((segment_col, new_segment))
+
     # Update timestamp
     now = datetime.now(BKK_TZ).strftime("%Y-%m-%d %H:%M:%S")
     cell_updates.append((header_to_col["Timestamp"], now))
@@ -691,7 +701,7 @@ LIVE_DATA_HEADERS = [
     "Deal Value (THB)", "Activity Type", "Sales Stage", "Payment Status",
     "Planned Visit Date", "Bidding Date", "Accompanying Rep", "Training Flag",
     "Close Reason", "Follow-up Notes", "Summary (EN)", "Raw Message",
-    "Batch ID", "Item #", "Source", "Manager Notes"
+    "Batch ID", "Item #", "Source", "Manager Notes", "Product Segment"
 ]
 
 
@@ -755,8 +765,8 @@ def get_or_create_live_tab(spreadsheet):
     try:
         return spreadsheet.worksheet("Live Data")
     except gspread.exceptions.WorksheetNotFound:
-        live_sheet = spreadsheet.add_worksheet(title="Live Data", rows=500, cols=24)
-        live_sheet.update(range_name="A1:X1", values=[LIVE_DATA_HEADERS])
+        live_sheet = spreadsheet.add_worksheet(title="Live Data", rows=500, cols=25)
+        live_sheet.update(range_name="A1:Y1", values=[LIVE_DATA_HEADERS])
         # Format header + freeze + protect (permanent record, restricted)
         spreadsheet.batch_update({"requests": [
             {
@@ -820,8 +830,8 @@ def get_or_create_rep_sheet(spreadsheet, rep_name):
     try:
         return spreadsheet.worksheet(rep_name)
     except gspread.exceptions.WorksheetNotFound:
-        rep_sheet = spreadsheet.add_worksheet(title=rep_name, rows=500, cols=24)
-        rep_sheet.update(range_name="A1:X1", values=[LIVE_DATA_HEADERS])
+        rep_sheet = spreadsheet.add_worksheet(title=rep_name, rows=500, cols=25)
+        rep_sheet.update(range_name="A1:Y1", values=[LIVE_DATA_HEADERS])
         # Format header + freeze + protect (only service account can edit)
         spreadsheet.batch_update({"requests": [
             {
@@ -861,8 +871,8 @@ def get_or_create_major_opportunity_sheet(spreadsheet):
     try:
         return spreadsheet.worksheet("Major Opportunity")
     except gspread.exceptions.WorksheetNotFound:
-        mo_sheet = spreadsheet.add_worksheet(title="Major Opportunity", rows=500, cols=24)
-        mo_sheet.update(range_name="A1:X1", values=[LIVE_DATA_HEADERS])
+        mo_sheet = spreadsheet.add_worksheet(title="Major Opportunity", rows=500, cols=25)
+        mo_sheet.update(range_name="A1:Y1", values=[LIVE_DATA_HEADERS])
         _format_new_sheet(spreadsheet, mo_sheet)
         print("[SHEETS] Created 'Major Opportunity' tab with headers")
         sys.stdout.flush()
@@ -960,6 +970,10 @@ def append_to_sheets(parsed: dict, rep_name: str, raw_message: str, user_id: str
         item_label = f"{i}/{total}" if total > 1 else ""
         is_training = activity.get("is_training")
         training_flag = "yes" if is_training else ""
+        segment = lookup_segment(
+            activity.get("product_brand", ""),
+            activity.get("product_name", "")
+        )
         row = [
             now,
             rep_name,
@@ -985,6 +999,7 @@ def append_to_sheets(parsed: dict, rep_name: str, raw_message: str, user_id: str
             item_label,
             "live",
             "",  # Manager Notes (blank, manual only)
+            segment,
         ]
         rows.append(row)
 

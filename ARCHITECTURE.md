@@ -90,7 +90,7 @@ All other integrations (LINE, Gemini, Groq) use `urllib.request` directly.
 
 ## 4. Data Model
 
-### 4.1 Column Schema (24 columns, A–X)
+### 4.1 Column Schema (25 columns, A–Y)
 
 | Col | Header | Type | Source |
 |-----|--------|------|--------|
@@ -118,10 +118,13 @@ All other integrations (LINE, Gemini, Groq) use `urllib.request` directly.
 | V | Item # | `1/3`, `2/3` etc. | Multi-activity grouping |
 | W | Source | `live` or `sample` | Bot vs. generated data |
 | X | Manager Notes | string | Manual entry only |
+| Y | Product Segment | enum | Auto-matched from product catalog (Megger only) |
 
 ### 4.2 Enums
 
 **Product Brand:** `Megger`, `Fluke`, `CRC`, `Salisbury`, `SmartWasher`, `IK Sprayer`, `HVOP`, `Other`
+
+**Product Segment** (Megger only): `CI` (Cable Infrastructure), `GET` (General Electrical Testing), `LVI` (Low Voltage Installation), `MRM` (Motor Reliability Management), `PDIX` (Partial Discharge), `PP` (Protection & Power), `PT` (Power Transformer) — auto-matched from 431-product catalog in `megger_segments.py`
 
 **Activity Type:** `visit`, `call`, `quotation`, `follow_up`, `closed_won`, `closed_lost`, `sent_to_service`, `other`
 
@@ -365,8 +368,9 @@ ate_sales_report_system_planning/
 │   ├── vercel.json                  # Builds + routes config
 │   ├── requirements.txt             # gspread + google-auth
 │   ├── api/
-│   │   ├── webhook.py               # Main serverless function (1260 lines)
-│   │   └── stale_check.py           # Stale deal endpoint (264 lines)
+│   │   ├── webhook.py               # Main serverless function (1,270+ lines)
+│   │   ├── stale_check.py           # Stale deal endpoint (264 lines)
+│   │   └── megger_segments.py       # 431-product → 7-segment lookup
 │   ├── populate_sample_data.py      # Sample data + sheet formatting
 │   ├── generate_rich_menu_image.py  # Rich menu PNG generator
 │   ├── setup_rich_menu.py           # Rich menu LINE API setup

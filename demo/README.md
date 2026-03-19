@@ -38,18 +38,22 @@ Phone (LINE) → Vercel (Python) → Gemini AI → Google Sheets → Looker Stud
 | **Legend** | Color coding reference | `populate_sample_data.py` |
 | **Backup_*** | Timestamped backups (max 3) | `populate_sample_data.py` |
 
-### Columns (A–X, 24 total)
+### Columns (A–Y, 25 total)
 
 ```
-A: Timestamp           I: Deal Value (THB)    Q: Close Reason
-B: Rep Name            J: Activity Type       R: Follow-up Notes
-C: Customer            K: Sales Stage         S: Summary (EN)
-D: Contact Person      L: Payment Status      T: Raw Message
-E: Contact Channel     M: Planned Visit Date  U: Batch ID
-F: Product Brand       N: Bidding Date        V: Item #
-G: Product Name        O: Accompanying Rep    W: Source (live/sample)
-H: Quantity            P: Training Flag       X: Manager Notes
+A: Timestamp           J: Activity Type       S: Summary (EN)
+B: Rep Name            K: Sales Stage         T: Raw Message
+C: Customer            L: Payment Status      U: Batch ID
+D: Contact Person      M: Planned Visit Date  V: Item #
+E: Contact Channel     N: Bidding Date        W: Source (live/sample)
+F: Product Brand       O: Accompanying Rep    X: Manager Notes
+G: Product Name        P: Training Flag       Y: Product Segment
+H: Quantity            Q: Close Reason
+I: Deal Value (THB)    R: Follow-up Notes
 ```
+
+Product Segment (column Y) is auto-matched for Megger products using a 431-product catalog.
+7 segments: CI, GET, LVI, MRM, PDIX, PP, PT. Non-Megger brands leave this column empty.
 
 ### Mandatory Fields (nudge triggers)
 

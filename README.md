@@ -89,7 +89,8 @@ The data is simultaneously written to 4 Google Sheets tabs and the dashboard upd
 | 🤖 | **Thai NLP Parsing** | Mixed Thai/English, Thai currency slang (แสนห้า, 1.5ล้าน), Thai dates (อังคารหน้า) |
 | 🤖 | **Dual AI Failover** | Gemini 2.5 Flash primary, Groq Llama 3.3 70B automatic fallback |
 | 🤖 | **Few-Shot Prompting** | 8 curated examples covering visits, closures, losses, service, bidding |
-| 📊 | **24-Column Schema** | Full activity lifecycle from lead to close, including training and close reasons |
+| 📊 | **25-Column Schema** | Full activity lifecycle from lead to close, including training and close reasons |
+| 📊 | **Product Segment Auto-Match** | 431 Megger products → 7 segments (CI, GET, LVI, MRM, PDIX, PP, PT) |
 | 📊 | **Multi-Sheet Write** | Every report → Rep Personal + Combined + Live Data + Major Opportunity (Megger) |
 | 📊 | **Smart Match** | Detects existing active deals with same customer+brand, suggests batch IDs |
 | 📊 | **Update System** | Modify existing deals via `อัพเดท MSG-XXXXX` — AI parses only changes |
@@ -132,6 +133,7 @@ The data is simultaneously written to 4 Google Sheets tabs and the dashboard upd
 
 | Decision | Approach | Rationale |
 |----------|----------|-----------|
+| **Product segment** | 431-product lookup dict in `megger_segments.py` — code-only, not AI | Deterministic matching is 100% reliable; no added AI latency or token cost |
 | **HTTP client** | `urllib.request` for LINE, Gemini, Groq — no SDKs | Eliminates version conflicts on Vercel's Python runtime; only 2 pip deps total |
 | **Database** | Google Sheets via gspread | Free, familiar to sales managers, sufficient for 6-8 reps; would migrate to PostgreSQL at scale |
 | **AI failover** | Gemini primary, Groq secondary | Gemini has superior Thai parsing; Groq provides sub-second fallback if Gemini is down |
@@ -153,8 +155,9 @@ ate_sales_report_system_planning/
 │       └── stale-check.yml          # Weekly cron trigger
 ├── demo/
 │   ├── api/
-│   │   ├── webhook.py               # Main serverless function (1,260 lines)
-│   │   └── stale_check.py           # Stale deal endpoint (264 lines)
+│   │   ├── webhook.py               # Main serverless function (1,270+ lines)
+│   │   ├── stale_check.py           # Stale deal endpoint (264 lines)
+│   │   └── megger_segments.py       # 431-product → 7-segment lookup
 │   ├── populate_sample_data.py      # Sample data + sheet formatting
 │   ├── generate_rich_menu_image.py  # Rich menu PNG generator
 │   ├── setup_rich_menu.py           # Rich menu LINE API setup
@@ -218,20 +221,21 @@ For detailed step-by-step setup (API keys, Google Sheets, LINE, Looker Studio), 
 ---
 
 <details>
-<summary><strong>Data Model (24 columns, A–X)</strong></summary>
+<summary><strong>Data Model (25 columns, A–Y)</strong></summary>
 
 ```
-A: Timestamp           I: Deal Value (THB)    Q: Close Reason
-B: Rep Name            J: Activity Type       R: Follow-up Notes
-C: Customer            K: Sales Stage         S: Summary (EN)
-D: Contact Person      L: Payment Status      T: Raw Message
-E: Contact Channel     M: Planned Visit Date  U: Batch ID
-F: Product Brand       N: Bidding Date        V: Item #
-G: Product Name        O: Accompanying Rep    W: Source (live/sample)
-H: Quantity            P: Training Flag       X: Manager Notes
+A: Timestamp           J: Activity Type       S: Summary (EN)
+B: Rep Name            K: Sales Stage         T: Raw Message
+C: Customer            L: Payment Status      U: Batch ID
+D: Contact Person      M: Planned Visit Date  V: Item #
+E: Contact Channel     N: Bidding Date        W: Source (live/sample)
+F: Product Brand       O: Accompanying Rep    X: Manager Notes
+G: Product Name        P: Training Flag       Y: Product Segment
+H: Quantity            Q: Close Reason
+I: Deal Value (THB)    R: Follow-up Notes
 ```
 
-**Key enums:** 8 activity types · 10 sales stages · 7 product brands
+**Key enums:** 8 activity types · 10 sales stages · 7 product brands · 7 Megger product segments
 
 See [ARCHITECTURE.md § Data Model](ARCHITECTURE.md#4-data-model) for full schema with types and enums.
 

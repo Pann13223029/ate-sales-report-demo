@@ -13,6 +13,9 @@ from datetime import datetime, timezone, timedelta
 import gspread
 from google.oauth2.service_account import Credentials
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "api"))
+from megger_segments import lookup_segment
+
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
@@ -50,9 +53,10 @@ def row(ts, rep, customer, contact, channel, brand, product, qty, value,
         activity, stage, payment="", visit_date="", bid_date="", accomp="",
         training="", close_reason="", notes="", summary="", raw="",
         batch_id="", item_label=""):
+    segment = lookup_segment(brand, product)
     return [ts, rep, customer, contact, channel, brand, product, qty, value,
             activity, stage, payment, visit_date, bid_date, accomp, training,
-            close_reason, notes, summary, raw, batch_id, item_label, "sample", ""]
+            close_reason, notes, summary, raw, batch_id, item_label, "sample", "", segment]
 
 # ---------------------------------------------------------------------------
 # Build sample data with Batch IDs
@@ -179,7 +183,7 @@ HEADERS = [
     "Deal Value (THB)", "Activity Type", "Sales Stage", "Payment Status",
     "Planned Visit Date", "Bidding Date", "Accompanying Rep", "Training Flag",
     "Close Reason", "Follow-up Notes", "Summary (EN)", "Raw Message",
-    "Batch ID", "Item #", "Source", "Manager Notes"
+    "Batch ID", "Item #", "Source", "Manager Notes", "Product Segment"
 ]
 
 spreadsheet = client.open_by_key(GOOGLE_SHEETS_ID)
@@ -217,11 +221,11 @@ if len(all_data) > 1:
     print(f"Cleared {len(all_data) - 1} existing rows.")
 
 # Step 2: Write headers
-sheet.update(range_name="A1:X1", values=[HEADERS])
+sheet.update(range_name="A1:Y1", values=[HEADERS])
 
 # Step 3: Insert sample data
 from gspread.utils import rowcol_to_a1
-end_cell = rowcol_to_a1(len(SAMPLE_DATA) + 1, 24)  # +1 for header row, 24 cols (A-X)
+end_cell = rowcol_to_a1(len(SAMPLE_DATA) + 1, 25)  # +1 for header row, 25 cols (A-Y)
 sheet.update(range_name=f"A2:{end_cell}", values=SAMPLE_DATA, value_input_option="USER_ENTERED")
 print(f"Inserted {len(SAMPLE_DATA)} sample rows.")
 
@@ -280,7 +284,7 @@ header_bands = [
     (14, 16, (0.85, 0.95, 0.90)),   # O-P: Accomp, Training
     (16, 17, (1.0, 0.90, 0.90)),    # Q: Close Reason
     (17, 20, (0.90, 0.90, 0.90)),   # R-T: Notes, Summary, Raw
-    (20, 24, (0.85, 0.85, 0.95)),   # U-X: Batch ID, Item, Source, Manager Notes
+    (20, 25, (0.85, 0.85, 0.95)),   # U-Y: Batch ID, Item, Source, Manager Notes, Product Segment
 ]
 
 # Apply subtle column background for data rows
@@ -320,6 +324,7 @@ col_widths = {
     21: 60,   # Item #
     22: 60,   # Source
     23: 200,  # Manager Notes
+    24: 100,  # Product Segment
 }
 for col_idx, width in col_widths.items():
     requests.append({
@@ -488,9 +493,80 @@ for value, color in payment_colors.items():
         }
     })
 
+# 13. Data validation: Product Segment (column Y = index 24) — Megger segments only
+segment_codes = ["CI", "GET", "LVI", "MRM", "PDIX", "PP", "PT", ""]
+requests.append({
+    "setDataValidation": {
+        "range": {"sheetId": sheet_id, "startRowIndex": 1, "endRowIndex": 200, "startColumnIndex": 24, "endColumnIndex": 25},
+        "rule": {
+            "condition": {"type": "ONE_OF_LIST", "values": [{"userEnteredValue": s} for s in segment_codes]},
+            "showCustomUi": True,
+            "strict": False,
+        },
+    }
+})
+
 # Execute all formatting in one batch
 spreadsheet.batch_update({"requests": requests})
 print("Formatting applied: headers, freeze, dropdowns, conditional colors, number format.")
+
+# ---------------------------------------------------------------------------
+# Legend sheet: add Product Segment reference
+# ---------------------------------------------------------------------------
+
+try:
+    legend = spreadsheet.worksheet("Legend")
+except gspread.exceptions.WorksheetNotFound:
+    legend = spreadsheet.add_worksheet(title="Legend", rows=200, cols=6)
+    print("Created Legend sheet.")
+
+# Find next empty section in Legend (append after existing content)
+existing = legend.get_all_values()
+start_row = len(existing) + 2  # Leave a blank row
+
+segment_data = [
+    [""],
+    ["📋 Megger Product Segments (auto-matched)"],
+    ["Segment Code", "Full Name", "Example Products"],
+    ["CI", "Cable Infrastructure", "VLF, Teleflex, TDR, AC/DC Hipot, EST, EZ-Thump"],
+    ["GET", "General Electrical Testing", "MIT515, MIT525, MIT1025, DLRO10, DLRO200, S1-1568, BM5200, BITE3"],
+    ["LVI", "Low Voltage Installation", "DET14C, DET24C, MIT400, MIT420, PAT350, MFT-X1, AVO835"],
+    ["MRM", "Motor Reliability Management", "Baker DX, Baker PPX30, ADX, EXP400"],
+    ["PDIX", "Partial Discharge", "PD Measurement system"],
+    ["PP", "Protection & Power", "Sverker750, Sverker900, EGIL, SMRT, TM1700, TM1800, ODEN"],
+    ["PT", "Power Transformer", "MTO330, MTO300, MTO250, TRAX280, TTR25, FRAX101, IDAX300, OTS80AF"],
+    [""],
+    ["ระบบจะจับคู่ Product Segment ให้อัตโนมัติจากชื่อสินค้า Megger"],
+    ["สินค้าแบรนด์อื่น (Fluke, CRC, Salisbury ฯลฯ) จะไม่มี segment"],
+]
+
+legend.update(
+    range_name=f"A{start_row}:C{start_row + len(segment_data) - 1}",
+    values=segment_data
+)
+
+# Bold the header row
+legend_id = legend.id
+spreadsheet.batch_update({"requests": [
+    {
+        "repeatCell": {
+            "range": {"sheetId": legend_id, "startRowIndex": start_row, "endRowIndex": start_row + 1, "startColumnIndex": 0, "endColumnIndex": 3},
+            "cell": {"userEnteredFormat": {"textFormat": {"bold": True, "fontSize": 14}}},
+            "fields": "userEnteredFormat.textFormat",
+        }
+    },
+    {
+        "repeatCell": {
+            "range": {"sheetId": legend_id, "startRowIndex": start_row + 1, "endRowIndex": start_row + 2, "startColumnIndex": 0, "endColumnIndex": 3},
+            "cell": {"userEnteredFormat": {
+                "backgroundColor": {"red": 0.15, "green": 0.3, "blue": 0.55},
+                "textFormat": {"bold": True, "foregroundColor": {"red": 1, "green": 1, "blue": 1}},
+            }},
+            "fields": "userEnteredFormat(backgroundColor,textFormat)",
+        }
+    },
+]})
+print("Legend sheet updated with Product Segment reference.")
 
 print(f"\nDone! Open your spreadsheet to verify:")
 print(f"https://docs.google.com/spreadsheets/d/{GOOGLE_SHEETS_ID}/edit")
