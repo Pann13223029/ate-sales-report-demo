@@ -61,8 +61,7 @@ The data is simultaneously written to 4 Google Sheets tabs and the dashboard upd
     "customer_name": "PTT",
     "contact_person": "คุณวีระ",
     "contact_channel": "081-234-5678",
-    "product_brand": "Megger",
-    "product_name": "MTO330",
+    "product_name": "Megger MTO330",
     "deal_value_thb": 150000,
     "activity_type": "visit",
     "sales_stage": "negotiation",
@@ -89,10 +88,10 @@ The data is simultaneously written to 4 Google Sheets tabs and the dashboard upd
 | 🤖 | **Thai NLP Parsing** | Mixed Thai/English, Thai currency slang (แสนห้า, 1.5ล้าน), Thai dates (อังคารหน้า) |
 | 🤖 | **Dual AI Failover** | Gemini 2.5 Flash primary, Groq Llama 3.3 70B automatic fallback |
 | 🤖 | **Few-Shot Prompting** | 8 curated examples covering visits, closures, losses, service, bidding |
-| 📊 | **25-Column Schema** | Full activity lifecycle from lead to close, including training and close reasons |
+| 📊 | **24-Column Schema** | Full activity lifecycle from lead to close, including training and close reasons |
 | 📊 | **Product Segment Auto-Match** | 431 Megger products → 7 segments (CI, GET, LVI, MRM, PDIX, PP, PT) |
-| 📊 | **Multi-Sheet Write** | Every report → Rep Personal + Combined + Live Data + Major Opportunity (Megger) |
-| 📊 | **Smart Match** | Detects existing active deals with same customer+brand, suggests batch IDs |
+| 📊 | **Multi-Sheet Write** | Every report → Combined + Live Data |
+| 📊 | **Smart Match** | Detects existing active deals with same customer+product, suggests batch IDs |
 | 📊 | **Update System** | Modify existing deals via `อัพเดท MSG-XXXXX` — AI parses only changes |
 | 💬 | **Hard Validation** | Reports without phone/email are rejected before saving |
 | 💬 | **3-Tier Nudge** | Polite Thai hints for missing fields (0=none, 1-2=hint, 3+=hint+example) |
@@ -111,7 +110,7 @@ The data is simultaneously written to 4 Google Sheets tabs and the dashboard upd
 | Primary AI | Google Gemini 2.5 Flash | Thai NLP → structured JSON | Free tier |
 | Fallback AI | Groq Llama 3.3 70B | Automatic failover | Free tier |
 | Database | Google Sheets (gspread) | Multi-tab structured storage | Free |
-| Dashboard | Looker Studio | KPIs, pipeline, brand mix | Free |
+| Dashboard | Looker Studio | KPIs, pipeline, segment mix | Free |
 | Cron | GitHub Actions | Weekly stale deal check | Free |
 
 > **Total recurring cost: $0/month**
@@ -138,7 +137,7 @@ The data is simultaneously written to 4 Google Sheets tabs and the dashboard upd
 | **Database** | Google Sheets via gspread | Free, familiar to sales managers, sufficient for 6-8 reps; would migrate to PostgreSQL at scale |
 | **AI failover** | Gemini primary, Groq secondary | Gemini has superior Thai parsing; Groq provides sub-second fallback if Gemini is down |
 | **Lazy imports** | gspread/google-auth imported inside functions | Vercel's Python runtime fails on module-level imports of these libraries |
-| **Multi-tab writes** | Every report → 4 sheets | Serves different audiences (rep self-view, manager combined, permanent audit, high-value Megger tracking) without complex queries |
+| **Multi-tab writes** | Every report → 2 sheets | Combined (dashboard) + Live Data (permanent audit) |
 
 ---
 
@@ -221,21 +220,21 @@ For detailed step-by-step setup (API keys, Google Sheets, LINE, Looker Studio), 
 ---
 
 <details>
-<summary><strong>Data Model (25 columns, A–Y)</strong></summary>
+<summary><strong>Data Model (24 columns, A–X)</strong></summary>
 
 ```
-A: Timestamp           J: Activity Type       S: Summary (EN)
-B: Rep Name            K: Sales Stage         T: Raw Message
-C: Customer            L: Payment Status      U: Batch ID
-D: Contact Person      M: Planned Visit Date  V: Item #
-E: Contact Channel     N: Bidding Date        W: Source (live/sample)
-F: Product Brand       O: Accompanying Rep    X: Manager Notes
-G: Product Name        P: Training Flag       Y: Product Segment
+A: Timestamp           J: Activity Type       R: Follow-up Notes
+B: Rep Name            K: Sales Stage         S: Summary (EN)
+C: Customer            L: Payment Status      T: Raw Message
+D: Contact Person      M: Planned Visit Date  U: Batch ID
+E: Contact Channel     N: Bidding Date        V: Item #
+F: Product Name        O: Accompanying Rep    W: Source (live/sample)
+G: Product Segment     P: Training Flag       X: Manager Notes
 H: Quantity            Q: Close Reason
-I: Deal Value (THB)    R: Follow-up Notes
+I: Deal Value (THB)
 ```
 
-**Key enums:** 8 activity types · 10 sales stages · 7 product brands · 7 Megger product segments
+**Key enums:** 8 activity types · 10 sales stages · 7 Megger product segments
 
 See [ARCHITECTURE.md § Data Model](ARCHITECTURE.md#4-data-model) for full schema with types and enums.
 

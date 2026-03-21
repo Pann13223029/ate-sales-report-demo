@@ -88,7 +88,6 @@ def find_stale_deals():
         ts_col = headers.index("Timestamp")
         rep_col = headers.index("Rep Name")
         customer_col = headers.index("Customer")
-        brand_col = headers.index("Product Brand")
         product_col = headers.index("Product Name")
         value_col = headers.index("Deal Value (THB)")
         stage_col = headers.index("Sales Stage")
@@ -102,7 +101,7 @@ def find_stale_deals():
     terminal = {"closed_won", "closed_lost", "job_expired", "equipment_defect"}
 
     # Group by batch_id → keep latest timestamp per deal
-    deals = {}  # batch_id → {rep, customer, brand, product, value, stage, timestamp}
+    deals = {}  # batch_id → {rep, customer, product, value, stage, timestamp}
     for row in all_data[1:]:
         if len(row) <= batch_col:
             continue
@@ -131,7 +130,6 @@ def find_stale_deals():
             deals[batch_id] = {
                 "rep": row[rep_col].strip(),
                 "customer": row[customer_col].strip(),
-                "brand": row[brand_col].strip(),
                 "product": row[product_col].strip(),
                 "value": val,
                 "stage": row[stage_col].strip(),
@@ -187,7 +185,7 @@ def send_stale_notifications(stale_by_rep, spreadsheet):
         msg = f"📋 คุณมี {len(deals)} ดีลที่ไม่มีอัพเดท {STALE_DAYS}+ วัน:\n"
         for i, deal in enumerate(deals[:10], 1):  # Max 10 per message
             val_str = f"฿{deal['value']:,.0f}" if deal['value'] else "—"
-            msg += (f"\n{i}. {deal['customer']} / {deal['brand']} {deal['product']}"
+            msg += (f"\n{i}. {deal['customer']} / {deal['product']}"
                     f" / {val_str} ({deal['days_stale']} วัน)"
                     f"\n   📝 {deal['batch_id']}")
 

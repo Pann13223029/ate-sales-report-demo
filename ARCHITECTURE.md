@@ -28,7 +28,7 @@ LINE Message → Vercel Serverless → Gemini AI Parse → Google Sheets → LIN
 | AI Parsing | Google Gemini 2.5 Flash (primary) | Thai NLP → structured JSON |
 | AI Fallback | Groq Llama 3.3 70B | Fallback if Gemini fails |
 | Database | Google Sheets (via gspread) | Multi-tab data storage |
-| Dashboard | Looker Studio | KPIs, pipeline chart, brand mix |
+| Dashboard | Looker Studio | KPIs, pipeline chart, segment mix |
 | Cron | GitHub Actions | Weekly stale deal notifications |
 | Rich Menu | LINE Rich Menu API | 5-button navigation |
 
@@ -52,8 +52,8 @@ All other integrations (LINE, Gemini, Groq) use `urllib.request` directly.
 6. Gemini AI parses message → structured JSON with activities[]
 7. Hard validation: reject if contact_channel missing (non-service activities)
 8. Soft validation: nudge for other missing mandatory fields
-9. Write to 4 sheets: Rep Personal → Combined → Live Data → Major Opportunity (Megger only)
-10. Smart match: check for existing active deals with same customer+brand
+9. Write to 2 sheets: Combined → Live Data
+10. Smart match: check for existing active deals with same customer+product
 11. Reply to LINE with confirmation + nudge + match suggestions
 ```
 
@@ -63,7 +63,7 @@ All other integrations (LINE, Gemini, Groq) use `urllib.request` directly.
 2. Regex match extracts batch_id + update text
 3. Existing row data fetched from Combined sheet
 4. Gemini AI parses update text against existing data → changed fields only
-5. Cell updates applied to: Combined → Rep Personal → Live Data → Major Opportunity
+5. Cell updates applied to: Combined → Live Data
 6. Reply with before→after diff
 ```
 
@@ -71,7 +71,7 @@ All other integrations (LINE, Gemini, Groq) use `urllib.request` directly.
 ```
 1. Rep sends "สรุป" or "สรุปยอด"
 2. All data read from Combined sheet
-3. Stats aggregated: by stage, brand, rep
+3. Stats aggregated: by stage, product segment, rep
 4. Gemini generates Thai-language summary (or fallback to raw stats)
 5. Reply with pipeline summary
 ```
@@ -90,7 +90,7 @@ All other integrations (LINE, Gemini, Groq) use `urllib.request` directly.
 
 ## 4. Data Model
 
-### 4.1 Column Schema (25 columns, A–Y)
+### 4.1 Column Schema (24 columns, A–X)
 
 | Col | Header | Type | Source |
 |-----|--------|------|--------|
@@ -99,8 +99,8 @@ All other integrations (LINE, Gemini, Groq) use `urllib.request` directly.
 | C | Customer | string | AI-parsed |
 | D | Contact Person | string | AI-parsed |
 | E | Contact Channel | string | AI-parsed (**mandatory**: phone/email) |
-| F | Product Brand | enum | AI-parsed |
-| G | Product Name | string | AI-parsed |
+| F | Product Name | string | AI-parsed |
+| G | Product Segment | enum | Auto-matched from product catalog (Megger only) |
 | H | Quantity | number | AI-parsed |
 | I | Deal Value (THB) | number | AI-parsed |
 | J | Activity Type | enum | AI-parsed |
@@ -118,13 +118,10 @@ All other integrations (LINE, Gemini, Groq) use `urllib.request` directly.
 | V | Item # | `1/3`, `2/3` etc. | Multi-activity grouping |
 | W | Source | `live` or `sample` | Bot vs. generated data |
 | X | Manager Notes | string | Manual entry only |
-| Y | Product Segment | enum | Auto-matched from product catalog (Megger only) |
 
 ### 4.2 Enums
 
-**Product Brand:** `Megger`, `Fluke`, `CRC`, `Salisbury`, `SmartWasher`, `IK Sprayer`, `HVOP`, `Other`
-
-**Product Segment** (Megger only): `CI` (Cable Infrastructure), `GET` (General Electrical Testing), `LVI` (Low Voltage Installation), `MRM` (Motor Reliability Management), `PDIX` (Partial Discharge), `PP` (Protection & Power), `PT` (Power Transformer) — auto-matched from 431-product catalog in `megger_segments.py`
+**Product Segment** (Megger products only): `CI` (Cable Infrastructure), `GET` (General Electrical Testing), `LVI` (Low Voltage Installation), `MRM` (Motor Reliability Management), `PDIX` (Partial Discharge), `PP` (Protection & Power), `PT` (Power Transformer) — auto-matched from 431-product catalog in `megger_segments.py`
 
 **Activity Type:** `visit`, `call`, `quotation`, `follow_up`, `closed_won`, `closed_lost`, `sent_to_service`, `other`
 
@@ -142,12 +139,10 @@ All other integrations (LINE, Gemini, Groq) use `urllib.request` directly.
 |-----|---------|------------|------------|
 | **Combined** | Dashboard source, all reps merged | Bot-managed, protected | Auto (renamed from Sheet1) |
 | **Live Data** | Permanent record, never cleared | Bot-managed, protected | Auto on first write |
-| **{Rep Name}** | Personal sheet per rep | Bot-managed, protected | Auto on first message |
-| **Major Opportunity** | Megger deals only (high-value tracking) | Standard headers | Auto on first Megger deal |
 | **Rep Registry** | LINE user_id → display name mapping | Standard headers | Auto on first message |
-| **Legend** | Reference: brands, stages, activity types, column guide | Unprotected | populate_sample_data.py |
+| **Legend** | Reference: stages, activity types, product segments, column guide | Unprotected | populate_sample_data.py |
 
-All bot-created sheets share the same header format: bold white text on dark blue background (`rgb(0.15, 0.3, 0.55)`), frozen first row, 24 columns A–X matching `LIVE_DATA_HEADERS`.
+All bot-created sheets share the same header format: bold white text on dark blue background (`rgb(0.15, 0.3, 0.55)`), frozen first row, 24 columns A–X matching `HEADERS`.
 
 ---
 
@@ -213,7 +208,7 @@ Reports without phone/email are **rejected before saving** (non-service activiti
 6 mandatory fields checked after successful save:
 - `customer_name` — ชื่อลูกค้า
 - `contact_channel` — เบอร์โทร/อีเมล ผู้ติดต่อ
-- `product_brand` — สินค้า/แบรนด์
+- `product_name` — ชื่อสินค้า
 - `deal_value_thb` — มูลค่าดีล
 - `activity_type` — ประเภทกิจกรรม
 - `sales_stage` — สถานะดีล
@@ -232,7 +227,7 @@ Service activities (`sent_to_service`) are exempt from all nudge checks.
 ## 8. Smart Match System
 
 When a new report is saved, the system scans Combined sheet for existing active deals:
-- **Match criteria:** customer name substring match + same brand or product name
+- **Match criteria:** customer name substring match + same product name
 - **Exclusions:** terminal-stage deals are skipped
 - **Deduplication:** grouped by batch_id, max 3 matches returned
 - Reply includes batch IDs so rep can use the update command

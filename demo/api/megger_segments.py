@@ -1,5 +1,5 @@
 """
-Megger Product Segment Lookup
+Product Segment Lookup
 431 products mapped to 7 segments from ATE's product catalog.
 Auto-matches product names typed by sales reps to their segment code.
 """
@@ -484,17 +484,16 @@ for _product, _segment in _RAW_PRODUCT_SEGMENTS.items():
         _NORMALIZED_INDEX[_norm] = _segment
 
 
-def lookup_segment(product_brand, product_name):
-    """Return segment code (e.g. 'PT') for Megger products, empty string for others.
+def lookup_segment(product_name):
+    """Return segment code (e.g. 'PT') for known products, empty string for others.
 
+    Matches product name against the 431-product catalog.
     Multi-tier matching:
     1. Exact normalized match
     2. Contains match (known model in input, or input in known model)
     3. Token extraction (alphanumeric groups)
     """
     if not product_name:
-        return ""
-    if not product_brand or product_brand.lower() != "megger":
         return ""
 
     normalized = _normalize(product_name)

@@ -25,7 +25,7 @@ Phone (LINE) → Vercel (Python) → Gemini AI → Google Sheets → Looker Stud
 | **Backup System** | Timestamped backup tabs before sample data regeneration (max 3 kept) |
 | **Sheet Formatting** | Conditional cell coloring, data validation dropdowns, frozen headers |
 | **Partial Data Highlighting** | Rows with missing mandatory fields highlighted in light red |
-| **Dashboard** | Looker Studio with KPIs, pipeline chart, brand mix, activity feed |
+| **Dashboard** | Looker Studio with KPIs, pipeline chart, segment mix, activity feed |
 
 ## Google Sheets Structure
 
@@ -38,28 +38,28 @@ Phone (LINE) → Vercel (Python) → Gemini AI → Google Sheets → Looker Stud
 | **Legend** | Color coding reference | `populate_sample_data.py` |
 | **Backup_*** | Timestamped backups (max 3) | `populate_sample_data.py` |
 
-### Columns (A–Y, 25 total)
+### Columns (A–X, 24 total)
 
 ```
-A: Timestamp           J: Activity Type       S: Summary (EN)
-B: Rep Name            K: Sales Stage         T: Raw Message
-C: Customer            L: Payment Status      U: Batch ID
-D: Contact Person      M: Planned Visit Date  V: Item #
-E: Contact Channel     N: Bidding Date        W: Source (live/sample)
-F: Product Brand       O: Accompanying Rep    X: Manager Notes
-G: Product Name        P: Training Flag       Y: Product Segment
+A: Timestamp           J: Activity Type       R: Follow-up Notes
+B: Rep Name            K: Sales Stage         S: Summary (EN)
+C: Customer            L: Payment Status      T: Raw Message
+D: Contact Person      M: Planned Visit Date  U: Batch ID
+E: Contact Channel     N: Bidding Date        V: Item #
+F: Product Name        O: Accompanying Rep    W: Source (live/sample)
+G: Product Segment     P: Training Flag       X: Manager Notes
 H: Quantity            Q: Close Reason
-I: Deal Value (THB)    R: Follow-up Notes
+I: Deal Value (THB)
 ```
 
-Product Segment (column Y) is auto-matched for Megger products using a 431-product catalog.
-7 segments: CI, GET, LVI, MRM, PDIX, PP, PT. Non-Megger brands leave this column empty.
+Product Segment (column G) is auto-matched from product name using a 431-product catalog.
+7 segments: CI, GET, LVI, MRM, PDIX, PP, PT. Products not in the catalog leave this column empty.
 
 ### Mandatory Fields (nudge triggers)
 
 1. Customer Name
 2. Contact Channel (phone/email)
-3. Product Brand
+3. Product Name (ชื่อสินค้า)
 4. Deal Value (THB)
 5. Activity Type
 6. Sales Stage
@@ -68,7 +68,6 @@ Product Segment (column Y) is auto-matched for Megger products using a 431-produ
 
 | Column | Options |
 |--------|---------|
-| Product Brand | Megger, Fluke, CRC, Salisbury, SmartWasher, IK Sprayer, HVOP, Other |
 | Activity Type | visit, call, quotation, follow_up, closed_won, closed_lost, sent_to_service, other |
 | Sales Stage | lead, plan_to_visit, visited, negotiation, quotation_sent, bidding, closed_won, closed_lost, job_expired, equipment_defect |
 | Payment Status | pending, deposit, paid |
@@ -177,9 +176,9 @@ python3 populate_sample_data.py --restore    # Restore from latest backup
 3. Build 4 sections:
    - **KPI Scorecards:** Total pipeline, total deals, won deals, win rate
    - **Pipeline Chart:** Bar chart by Sales Stage (color per stage)
-   - **Brand Mix:** Donut chart by Product Brand
+   - **Segment Mix:** Donut chart by Product Segment
    - **Activity Feed:** Table with recent entries sorted by timestamp
-4. Add filter controls: Rep Name, Product Brand, Date Range
+4. Add filter controls: Rep Name, Product Segment, Date Range
 5. Set data freshness to 1 minute
 6. Share: Anyone with the link → Viewer
 
@@ -229,5 +228,5 @@ demo/
 - **3 deal progression stories:** PTT/Megger (won), EGAT/Fluke (lost), SCG/Salisbury (won)
 - **2 multi-activity entries:** PTTEP 3-item visit, PEA 2-item visit
 - **5 fictional reps:** สมชาย, วิภา, ธนกฤต, ปิยะ, อนุชา, นภัสสร
-- **All 6 brands represented:** Megger (dominant), Fluke, CRC, Salisbury, SmartWasher, IK Sprayer
+- **Multiple product lines:** MTO330, MIT525, Ti480 PRO, CRC 2-26, Arc Flash Kit, and more
 - **Realistic win/loss ratio:** ~30% won, ~20% lost, ~50% in pipeline

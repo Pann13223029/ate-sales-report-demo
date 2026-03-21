@@ -38,14 +38,7 @@ BKK_TZ = timezone(timedelta(hours=7))
 
 SYSTEM_PROMPT = """You are a sales report data extraction assistant for ATE (Advanced Technology Equipment Co., Ltd.), a Thai B2B distributor of industrial equipment.
 
-ATE distributes the following brands:
-- Megger — electrical testing equipment (insulation testers, cable fault locators, transformer testers like MTO330, MIT525, MTO300, DLRO200, S1-1568)
-- Fluke — electronic test tools (digital multimeters, thermal imagers, power quality analyzers like 1587 FC, 1770, 87V, Ti480 PRO, 435-II)
-- CRC — industrial chemicals (contact cleaners like 2-26, Lectra Clean, lubricants, degreasers, Rust Remover)
-- Salisbury — electrical safety equipment (insulating gloves, arc flash protection kits, hot sticks)
-- SmartWasher — parts washing systems (bioremediating parts washers SW-28, OzzyJuice)
-- IK Sprayer — industrial sprayers (pressure sprayers Pro 12, foam sprayers)
-- HVOP (KATO tech) — high voltage operating products
+ATE sells products such as: MTO330, MIT525, MTO300, DLRO200, S1-1568, MIT1025, 1587 FC, 1770, 87V, Ti480 PRO, 435-II, CRC 2-26, Lectra Clean, Contact Cleaner, Rust Remover, Arc Flash Kit, Insulating Gloves, SW-28, Pro 12, HV Detector, and more.
 
 Analyze the LINE message from a field sales rep and extract structured data.
 
@@ -69,8 +62,7 @@ Return ONLY valid JSON matching this schema:
       "customer_name": "string or null",
       "contact_person": "string or null",
       "contact_channel": "string — MANDATORY: phone number or email address of the contact person. Must be a real phone number (e.g. 081-234-5678) or email (e.g. weera@ptt.co.th). Never use 'เข้าพบ' or visit/call categories. null only if truly not mentioned.",
-      "product_brand": "Megger|Fluke|CRC|Salisbury|SmartWasher|IK Sprayer|HVOP|Other|null",
-      "product_name": "string or null",
+      "product_name": "string or null — the product model/name mentioned (e.g. MTO330, 1587 FC, CRC 2-26)",
       "quantity": number or null,
       "deal_value_thb": number or null,
       "activity_type": "visit|call|quotation|follow_up|closed_won|closed_lost|sent_to_service|other",
@@ -92,36 +84,36 @@ If is_sales_report is false, return: {"is_sales_report": false, "activities": []
 
 FEW_SHOT_EXAMPLES = [
     {
-        "input": "ไปเยี่ยม PTT วันนี้ เสนอ Megger MTO330 ราคา 150,000",
-        "output": '{"is_sales_report":true,"activities":[{"customer_name":"PTT","contact_person":null,"contact_channel":null,"product_brand":"Megger","product_name":"MTO330","quantity":null,"deal_value_thb":150000,"activity_type":"visit","sales_stage":"quotation_sent","payment_status":null,"planned_visit_date":null,"bidding_date":null,"accompanying_rep":null,"is_training":null,"close_reason":null,"follow_up_notes":null,"summary_en":"Visited PTT, quoted Megger MTO330 at 150K THB"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- เข้าพบลูกค้า: PTT\\n- สินค้า: Megger MTO330\\n- มูลค่า: ฿150,000\\n- สถานะ: เสนอราคาแล้ว"}'
+        "input": "ไปเยี่ยม PTT วันนี้ เสนอ MTO330 ราคา 150,000",
+        "output": '{"is_sales_report":true,"activities":[{"customer_name":"PTT","contact_person":null,"contact_channel":null,"product_name":"MTO330","quantity":null,"deal_value_thb":150000,"activity_type":"visit","sales_stage":"quotation_sent","payment_status":null,"planned_visit_date":null,"bidding_date":null,"accompanying_rep":null,"is_training":null,"close_reason":null,"follow_up_notes":null,"summary_en":"Visited PTT, quoted MTO330 at 150K THB"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- เข้าพบลูกค้า: PTT\\n- สินค้า: MTO330\\n- มูลค่า: ฿150,000\\n- สถานะ: เสนอราคาแล้ว"}'
     },
     {
-        "input": "ปิดดีล Fluke 1770 กับ EGAT แล้ว 450K วางมัดจำ 50%",
-        "output": '{"is_sales_report":true,"activities":[{"customer_name":"EGAT","contact_person":null,"contact_channel":null,"product_brand":"Fluke","product_name":"1770","quantity":null,"deal_value_thb":450000,"activity_type":"closed_won","sales_stage":"closed_won","payment_status":"deposit","planned_visit_date":null,"bidding_date":null,"accompanying_rep":null,"is_training":null,"close_reason":"ปิดดีลได้ตามราคาเสนอ ลูกค้าวางมัดจำ 50%","follow_up_notes":"Customer paid 50% deposit (225,000 THB); remaining 50% pending","summary_en":"Closed Fluke 1770 deal with EGAT, 450K THB, 50% deposit"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- ปิดการขายสำเร็จ: EGAT\\n- สินค้า: Fluke 1770\\n- มูลค่า: ฿450,000\\n- วางมัดจำ: 50%\\n\\nยินดีด้วยครับ! 🎉"}'
+        "input": "ปิดดีล 1770 กับ EGAT แล้ว 450K วางมัดจำ 50%",
+        "output": '{"is_sales_report":true,"activities":[{"customer_name":"EGAT","contact_person":null,"contact_channel":null,"product_name":"1770","quantity":null,"deal_value_thb":450000,"activity_type":"closed_won","sales_stage":"closed_won","payment_status":"deposit","planned_visit_date":null,"bidding_date":null,"accompanying_rep":null,"is_training":null,"close_reason":"ปิดดีลได้ตามราคาเสนอ ลูกค้าวางมัดจำ 50%","follow_up_notes":"Customer paid 50% deposit (225,000 THB); remaining 50% pending","summary_en":"Closed 1770 deal with EGAT, 450K THB, 50% deposit"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- ปิดการขายสำเร็จ: EGAT\\n- สินค้า: 1770\\n- มูลค่า: ฿450,000\\n- วางมัดจำ: 50%\\n\\nยินดีด้วยครับ! 🎉"}'
     },
     {
-        "input": "ลูกค้า SCG โทรมาเบอร์ 081-234-5678 สนใจ CRC contact cleaner 20 กระป๋อง",
-        "output": '{"is_sales_report":true,"activities":[{"customer_name":"SCG","contact_person":null,"contact_channel":"081-234-5678","product_brand":"CRC","product_name":"Contact Cleaner","quantity":20,"deal_value_thb":null,"activity_type":"call","sales_stage":"lead","payment_status":null,"planned_visit_date":null,"bidding_date":null,"accompanying_rep":null,"is_training":null,"close_reason":null,"follow_up_notes":"Customer called expressing interest in 20 cans","summary_en":"SCG called, interested in CRC Contact Cleaner x20"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- ลูกค้าโทรเข้ามา: SCG\\n- สินค้า: CRC Contact Cleaner\\n- จำนวน: 20 กระป๋อง\\n- สถานะ: ลูกค้าสนใจ (Lead)"}'
+        "input": "ลูกค้า SCG โทรมาเบอร์ 081-234-5678 สนใจ CRC Contact Cleaner 20 กระป๋อง",
+        "output": '{"is_sales_report":true,"activities":[{"customer_name":"SCG","contact_person":null,"contact_channel":"081-234-5678","product_name":"CRC Contact Cleaner","quantity":20,"deal_value_thb":null,"activity_type":"call","sales_stage":"lead","payment_status":null,"planned_visit_date":null,"bidding_date":null,"accompanying_rep":null,"is_training":null,"close_reason":null,"follow_up_notes":"Customer called expressing interest in 20 cans","summary_en":"SCG called, interested in CRC Contact Cleaner x20"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- ลูกค้าโทรเข้ามา: SCG\\n- สินค้า: CRC Contact Cleaner\\n- จำนวน: 20 กระป๋อง\\n- สถานะ: ลูกค้าสนใจ (Lead)"}'
     },
     {
         "input": "ใครจะไปกินข้าวเที่ยงมั่ง",
         "output": '{"is_sales_report":false,"activities":[],"confirmation_th":null}'
     },
     {
-        "input": "จะไปเยี่ยม IRPC อังคารหน้า เรื่อง Megger MIT525 พาน้องใหม่สมชายไปด้วย",
-        "output": '{"is_sales_report":true,"activities":[{"customer_name":"IRPC","contact_person":null,"contact_channel":null,"product_brand":"Megger","product_name":"MIT525","quantity":null,"deal_value_thb":null,"activity_type":"visit","sales_stage":"plan_to_visit","payment_status":null,"planned_visit_date":"2026-03-17","bidding_date":null,"accompanying_rep":"สมชาย","is_training":true,"close_reason":null,"follow_up_notes":"Planned visit next Tuesday with trainee","summary_en":"Planning to visit IRPC next Tue for Megger MIT525, with trainee"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- นัดเข้าพบ: IRPC (อังคารหน้า)\\n- สินค้า: Megger MIT525\\n- ไปกับ: สมชาย (ฝึกงาน)\\n- สถานะ: นัดเข้าพบ"}'
+        "input": "จะไปเยี่ยม IRPC อังคารหน้า เรื่อง MIT525 พาน้องใหม่สมชายไปด้วย",
+        "output": '{"is_sales_report":true,"activities":[{"customer_name":"IRPC","contact_person":null,"contact_channel":null,"product_name":"MIT525","quantity":null,"deal_value_thb":null,"activity_type":"visit","sales_stage":"plan_to_visit","payment_status":null,"planned_visit_date":"2026-03-17","bidding_date":null,"accompanying_rep":"สมชาย","is_training":true,"close_reason":null,"follow_up_notes":"Planned visit next Tuesday with trainee","summary_en":"Planning to visit IRPC next Tue for MIT525, with trainee"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- นัดเข้าพบ: IRPC (อังคารหน้า)\\n- สินค้า: MIT525\\n- ไปกับ: สมชาย (ฝึกงาน)\\n- สถานะ: นัดเข้าพบ"}'
     },
     {
-        "input": "เสียงาน Salisbury ถุงมือกันไฟฟ้าที่ กฟภ. แพ้ราคาเจ้าอื่น มูลค่า 320,000",
-        "output": '{"is_sales_report":true,"activities":[{"customer_name":"กฟภ. (PEA)","contact_person":null,"contact_channel":null,"product_brand":"Salisbury","product_name":"Insulating Gloves","quantity":null,"deal_value_thb":320000,"activity_type":"closed_lost","sales_stage":"closed_lost","payment_status":null,"planned_visit_date":null,"bidding_date":null,"accompanying_rep":null,"is_training":null,"close_reason":"แพ้ราคาคู่แข่ง ราคาถูกกว่า","follow_up_notes":"Lost on price — competitor was cheaper","summary_en":"Lost Salisbury gloves deal at PEA, 320K, undercut on price"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- เสียงาน: กฟภ.\\n- สินค้า: Salisbury ถุงมือกันไฟฟ้า\\n- มูลค่า: ฿320,000\\n- สาเหตุ: แพ้ราคา\\n\\nไม่เป็นไรครับ ครั้งหน้าจะได้แน่นอน 💪"}'
+        "input": "เสียงาน Insulating Gloves ที่ กฟภ. แพ้ราคาเจ้าอื่น มูลค่า 320,000",
+        "output": '{"is_sales_report":true,"activities":[{"customer_name":"กฟภ. (PEA)","contact_person":null,"contact_channel":null,"product_name":"Insulating Gloves","quantity":null,"deal_value_thb":320000,"activity_type":"closed_lost","sales_stage":"closed_lost","payment_status":null,"planned_visit_date":null,"bidding_date":null,"accompanying_rep":null,"is_training":null,"close_reason":"แพ้ราคาคู่แข่ง ราคาถูกกว่า","follow_up_notes":"Lost on price — competitor was cheaper","summary_en":"Lost Insulating Gloves deal at PEA, 320K, undercut on price"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- เสียงาน: กฟภ.\\n- สินค้า: Insulating Gloves\\n- มูลค่า: ฿320,000\\n- สาเหตุ: แพ้ราคา\\n\\nไม่เป็นไรครับ ครั้งหน้าจะได้แน่นอน 💪"}'
     },
     {
-        "input": "ส่ง Megger MTO330 เครื่องของ PTT เข้าซ่อม warranty",
-        "output": '{"is_sales_report":true,"activities":[{"customer_name":"PTT","contact_person":null,"contact_channel":null,"product_brand":"Megger","product_name":"MTO330","quantity":1,"deal_value_thb":null,"activity_type":"sent_to_service","sales_stage":null,"payment_status":null,"planned_visit_date":null,"bidding_date":null,"accompanying_rep":null,"is_training":null,"close_reason":null,"follow_up_notes":"Sent unit for warranty repair","summary_en":"Sent PTT Megger MTO330 for warranty service"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- ส่งซ่อม warranty: PTT\\n- สินค้า: Megger MTO330\\n- สถานะ: ส่งเข้าศูนย์บริการ"}'
+        "input": "ส่ง MTO330 เครื่องของ PTT เข้าซ่อม warranty",
+        "output": '{"is_sales_report":true,"activities":[{"customer_name":"PTT","contact_person":null,"contact_channel":null,"product_name":"MTO330","quantity":1,"deal_value_thb":null,"activity_type":"sent_to_service","sales_stage":null,"payment_status":null,"planned_visit_date":null,"bidding_date":null,"accompanying_rep":null,"is_training":null,"close_reason":null,"follow_up_notes":"Sent unit for warranty repair","summary_en":"Sent PTT MTO330 for warranty service"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- ส่งซ่อม warranty: PTT\\n- สินค้า: MTO330\\n- สถานะ: ส่งเข้าศูนย์บริการ"}'
     },
     {
-        "input": "ส่งเมล์ใบเสนอราคา Megger MIT525 ให้ กฟภ. 3 เครื่อง 2.1 ล้าน ประมูลเปิดซอง 25 มี.ค. email: procurement@pea.co.th",
-        "output": '{"is_sales_report":true,"activities":[{"customer_name":"กฟภ. (PEA)","contact_person":null,"contact_channel":"procurement@pea.co.th","product_brand":"Megger","product_name":"MIT525","quantity":3,"deal_value_thb":2100000,"activity_type":"quotation","sales_stage":"bidding","payment_status":null,"planned_visit_date":null,"bidding_date":"2026-03-25","accompanying_rep":null,"is_training":null,"close_reason":null,"follow_up_notes":"Government bid submitted via email, opening date March 25","summary_en":"Submitted bid for 3x Megger MIT525 at PEA, 2.1M THB, opens Mar 25"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- ยื่นประมูล: กฟภ.\\n- สินค้า: Megger MIT525 x3\\n- มูลค่า: ฿2,100,000\\n- เปิดซอง: 25 มี.ค. 2569"}'
+        "input": "ส่งเมล์ใบเสนอราคา MIT525 ให้ กฟภ. 3 เครื่อง 2.1 ล้าน ประมูลเปิดซอง 25 มี.ค. email: procurement@pea.co.th",
+        "output": '{"is_sales_report":true,"activities":[{"customer_name":"กฟภ. (PEA)","contact_person":null,"contact_channel":"procurement@pea.co.th","product_name":"MIT525","quantity":3,"deal_value_thb":2100000,"activity_type":"quotation","sales_stage":"bidding","payment_status":null,"planned_visit_date":null,"bidding_date":"2026-03-25","accompanying_rep":null,"is_training":null,"close_reason":null,"follow_up_notes":"Government bid submitted via email, opening date March 25","summary_en":"Submitted bid for 3x MIT525 at PEA, 2.1M THB, opens Mar 25"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- ยื่นประมูล: กฟภ.\\n- สินค้า: MIT525 x3\\n- มูลค่า: ฿2,100,000\\n- เปิดซอง: 25 มี.ค. 2569"}'
     }
 ]
 
@@ -246,7 +238,7 @@ def parse_message(message_text: str) -> dict:
 MANDATORY_FIELDS = {
     "customer_name": "ชื่อลูกค้า",
     "contact_channel": "เบอร์โทร/อีเมล ผู้ติดต่อ",
-    "product_brand": "สินค้า/แบรนด์",
+    "product_name": "ชื่อสินค้า",
     "deal_value_thb": "มูลค่าดีล",
     "activity_type": "ประเภทกิจกรรม",
     "sales_stage": "สถานะดีล",
@@ -340,7 +332,7 @@ HELP_RESPONSE = """📝 วิธีรายงานการขาย
 ข้อมูลสำคัญ 6 อย่าง:
 ✅ ชื่อลูกค้า
 ✅ เบอร์โทร/อีเมล ผู้ติดต่อ (จำเป็น!)
-✅ สินค้า/แบรนด์ (Megger, Fluke, CRC, Salisbury, SmartWasher, IK Sprayer, HVOP)
+✅ ชื่อสินค้า (เช่น MTO330, MIT525, Fluke 87V, CRC 2-26)
 ✅ มูลค่าดีล
 ✅ กิจกรรม (เยี่ยม/โทร/เสนอราคา/ปิดดีล/ส่งซ่อม)
 ✅ สถานะ (สนใจ/นัดเยี่ยม/เยี่ยมแล้ว/เจรจา/ส่ง QT/ประมูล/ปิดได้/เสียงาน)"""
@@ -379,7 +371,6 @@ AI_FIELD_TO_HEADER = {
     "customer_name": "Customer",
     "contact_person": "Contact Person",
     "contact_channel": "Contact Channel",
-    "product_brand": "Product Brand",
     "product_name": "Product Name",
     "quantity": "Quantity",
     "deal_value_thb": "Deal Value (THB)",
@@ -457,7 +448,7 @@ def handle_update_command(message_text, reply_token, rep_name):
 The rep says: "{update_text}"
 
 Return ONLY the fields that should change as a JSON object. Use these exact field names:
-customer_name, contact_person, contact_channel, product_brand, product_name, quantity,
+customer_name, contact_person, contact_channel, product_name, quantity,
 deal_value_thb, activity_type, sales_stage, payment_status, planned_visit_date,
 bidding_date, accompanying_rep, close_reason, follow_up_notes, summary_en
 
@@ -516,10 +507,9 @@ Return ONLY valid JSON with changed fields. Do NOT include unchanged fields."""
             cell_updates.append((col, str(new_value) if new_value is not None else ""))
 
     # Re-match Product Segment if product changed
-    if "product_name" in changes or "product_brand" in changes:
-        brand = changes.get("product_brand") or existing_data.get("Product Brand", "")
+    if "product_name" in changes:
         name = changes.get("product_name") or existing_data.get("Product Name", "")
-        new_segment = lookup_segment(brand, name)
+        new_segment = lookup_segment(name)
         segment_col = header_to_col.get("Product Segment")
         if segment_col:
             cell_updates.append((segment_col, new_segment))
@@ -539,18 +529,7 @@ Return ONLY valid JSON with changed fields. Do NOT include unchanged fields."""
     _apply_cell_updates(combined, row_numbers, cell_updates)
     updated_sheets.append("Combined")
 
-    # 2. Rep's personal sheet
-    try:
-        original_rep = existing_data.get("Rep Name", rep_name)
-        rep_sheet = spreadsheet.worksheet(original_rep)
-        rep_rows = _find_rows_by_batch_id(rep_sheet, batch_id)
-        if rep_rows:
-            _apply_cell_updates(rep_sheet, rep_rows, cell_updates)
-            updated_sheets.append(original_rep)
-    except Exception:
-        pass
-
-    # 3. Live Data
+    # 2. Live Data
     try:
         live_sheet = get_or_create_live_tab(spreadsheet)
         live_rows = _find_rows_by_batch_id(live_sheet, batch_id)
@@ -559,19 +538,6 @@ Return ONLY valid JSON with changed fields. Do NOT include unchanged fields."""
             updated_sheets.append("Live Data")
     except Exception:
         pass
-
-    # 4. Major Opportunity (if Megger deal)
-    is_megger = (existing_data.get("Product Brand") == "Megger"
-                 or changes.get("product_brand") == "Megger")
-    if is_megger:
-        try:
-            mo_sheet = spreadsheet.worksheet("Major Opportunity")
-            mo_rows = _find_rows_by_batch_id(mo_sheet, batch_id)
-            if mo_rows:
-                _apply_cell_updates(mo_sheet, mo_rows, cell_updates)
-                updated_sheets.append("Major Opportunity")
-        except Exception:
-            pass
 
     # Build before→after reply
     change_lines = []
@@ -612,7 +578,7 @@ def generate_summary(reply_token: str):
     try:
         val_idx = headers.index("Deal Value (THB)")
         stage_idx = headers.index("Sales Stage")
-        brand_idx = headers.index("Product Brand")
+        segment_idx = headers.index("Product Segment")
         rep_idx = headers.index("Rep Name")
         activity_idx = headers.index("Activity Type")
         customer_idx = headers.index("Customer")
@@ -624,7 +590,7 @@ def generate_summary(reply_token: str):
     total_value = 0
     stage_counts = {}
     stage_values = {}
-    brand_values = {}
+    segment_values = {}
     rep_values = {}
 
     for row in rows:
@@ -636,12 +602,13 @@ def generate_summary(reply_token: str):
         total_value += val
 
         stage = row[stage_idx] if stage_idx < len(row) else ""
-        brand = row[brand_idx] if brand_idx < len(row) else ""
+        segment = row[segment_idx] if segment_idx < len(row) else ""
         rep = row[rep_idx] if rep_idx < len(row) else ""
 
         stage_counts[stage] = stage_counts.get(stage, 0) + 1
         stage_values[stage] = stage_values.get(stage, 0) + val
-        brand_values[brand] = brand_values.get(brand, 0) + val
+        if segment:
+            segment_values[segment] = segment_values.get(segment, 0) + val
         rep_values[rep] = rep_values.get(rep, 0) + val
 
     # Build stats text for Gemini
@@ -652,8 +619,8 @@ def generate_summary(reply_token: str):
 By Sales Stage:
 {chr(10).join(f'  - {s}: {c} deals, {stage_values.get(s, 0):,.0f} THB' for s, c in sorted(stage_counts.items()))}
 
-By Brand:
-{chr(10).join(f'  - {b}: {v:,.0f} THB' for b, v in sorted(brand_values.items(), key=lambda x: -x[1]))}
+By Product Segment:
+{chr(10).join(f'  - {s}: {v:,.0f} THB' for s, v in sorted(segment_values.items(), key=lambda x: -x[1]))}
 
 By Rep:
 {chr(10).join(f'  - {r}: {v:,.0f} THB' for r, v in sorted(rep_values.items(), key=lambda x: -x[1]))}"""
@@ -697,11 +664,11 @@ Format for LINE chat (plain text, no markdown).
 
 LIVE_DATA_HEADERS = [
     "Timestamp", "Rep Name", "Customer", "Contact Person",
-    "Contact Channel", "Product Brand", "Product Name", "Quantity",
+    "Contact Channel", "Product Name", "Product Segment", "Quantity",
     "Deal Value (THB)", "Activity Type", "Sales Stage", "Payment Status",
     "Planned Visit Date", "Bidding Date", "Accompanying Rep", "Training Flag",
     "Close Reason", "Follow-up Notes", "Summary (EN)", "Raw Message",
-    "Batch ID", "Item #", "Source", "Manager Notes", "Product Segment"
+    "Batch ID", "Item #", "Source", "Manager Notes"
 ]
 
 
@@ -765,8 +732,8 @@ def get_or_create_live_tab(spreadsheet):
     try:
         return spreadsheet.worksheet("Live Data")
     except gspread.exceptions.WorksheetNotFound:
-        live_sheet = spreadsheet.add_worksheet(title="Live Data", rows=500, cols=25)
-        live_sheet.update(range_name="A1:Y1", values=[LIVE_DATA_HEADERS])
+        live_sheet = spreadsheet.add_worksheet(title="Live Data", rows=500, cols=24)
+        live_sheet.update(range_name="A1:X1", values=[LIVE_DATA_HEADERS])
         # Format header + freeze + protect (permanent record, restricted)
         spreadsheet.batch_update({"requests": [
             {
@@ -824,64 +791,11 @@ def get_or_create_combined_sheet(spreadsheet):
         return sheet1
 
 
-def get_or_create_rep_sheet(spreadsheet, rep_name):
-    """Get rep's personal sheet, creating it with headers + protection if new."""
-    import gspread
-    try:
-        return spreadsheet.worksheet(rep_name)
-    except gspread.exceptions.WorksheetNotFound:
-        rep_sheet = spreadsheet.add_worksheet(title=rep_name, rows=500, cols=25)
-        rep_sheet.update(range_name="A1:Y1", values=[LIVE_DATA_HEADERS])
-        # Format header + freeze + protect (only service account can edit)
-        spreadsheet.batch_update({"requests": [
-            {
-                "repeatCell": {
-                    "range": {"sheetId": rep_sheet.id, "startRowIndex": 0, "endRowIndex": 1},
-                    "cell": {"userEnteredFormat": {
-                        "backgroundColor": {"red": 0.15, "green": 0.3, "blue": 0.55},
-                        "textFormat": {"bold": True, "foregroundColor": {"red": 1, "green": 1, "blue": 1}},
-                    }},
-                    "fields": "userEnteredFormat(backgroundColor,textFormat)",
-                }
-            },
-            {
-                "updateSheetProperties": {
-                    "properties": {"sheetId": rep_sheet.id, "gridProperties": {"frozenRowCount": 1}},
-                    "fields": "gridProperties.frozenRowCount",
-                }
-            },
-            {
-                "addProtectedRange": {
-                    "protectedRange": {
-                        "range": {"sheetId": rep_sheet.id},
-                        "description": f"Personal sheet for {rep_name} — bot-managed",
-                        "warningOnly": False,
-                    }
-                }
-            },
-        ]})
-        print(f"[SHEETS] Created personal sheet for '{rep_name}' with protection")
-        sys.stdout.flush()
-        return rep_sheet
-
-
-def get_or_create_major_opportunity_sheet(spreadsheet):
-    """Get 'Major Opportunity' tab for Megger deals, creating if needed."""
-    import gspread
-    try:
-        return spreadsheet.worksheet("Major Opportunity")
-    except gspread.exceptions.WorksheetNotFound:
-        mo_sheet = spreadsheet.add_worksheet(title="Major Opportunity", rows=500, cols=25)
-        mo_sheet.update(range_name="A1:Y1", values=[LIVE_DATA_HEADERS])
-        _format_new_sheet(spreadsheet, mo_sheet)
-        print("[SHEETS] Created 'Major Opportunity' tab with headers")
-        sys.stdout.flush()
-        return mo_sheet
 
 
 def _detect_matching_deals(combined_sheet, activities):
     """Check Combined sheet for existing active deals matching new activities.
-    Returns list of match dicts: {batch_id, customer, brand, product, value, stage}
+    Returns list of match dicts: {batch_id, customer, product, value, stage, segment}
     """
     all_data = combined_sheet.get_all_values()
     if len(all_data) <= 1:
@@ -890,11 +804,11 @@ def _detect_matching_deals(combined_sheet, activities):
     headers = all_data[0]
     try:
         customer_col = headers.index("Customer")
-        brand_col = headers.index("Product Brand")
         product_col = headers.index("Product Name")
         stage_col = headers.index("Sales Stage")
         value_col = headers.index("Deal Value (THB)")
         batch_col = headers.index("Batch ID")
+        segment_col = headers.index("Product Segment")
     except ValueError:
         return []
 
@@ -904,7 +818,6 @@ def _detect_matching_deals(combined_sheet, activities):
 
     for activity in activities:
         new_customer = (activity.get("customer_name") or "").strip().lower()
-        new_brand = (activity.get("product_brand") or "").strip().lower()
         new_product = (activity.get("product_name") or "").strip().lower()
         if not new_customer:
             continue
@@ -921,23 +834,22 @@ def _detect_matching_deals(combined_sheet, activities):
                 continue
 
             existing_customer = row[customer_col].strip().lower()
-            existing_brand = row[brand_col].strip().lower()
             existing_product = row[product_col].strip().lower()
 
-            # Match: customer substring + same brand or product
+            # Match: customer substring + same product name
             customer_match = (new_customer in existing_customer
                               or existing_customer in new_customer)
-            product_match = ((new_brand and new_brand == existing_brand)
-                             or (new_product and new_product in existing_product))
+            product_match = (new_product and new_product in existing_product
+                             or existing_product in new_product)
 
             if customer_match and product_match:
                 matches.append({
                     "batch_id": existing_batch,
                     "customer": row[customer_col],
-                    "brand": row[brand_col],
                     "product": row[product_col],
                     "value": row[value_col] if value_col < len(row) else "",
                     "stage": row[stage_col],
+                    "segment": row[segment_col] if segment_col < len(row) else "",
                 })
                 seen_batches.add(existing_batch)
 
@@ -970,18 +882,15 @@ def append_to_sheets(parsed: dict, rep_name: str, raw_message: str, user_id: str
         item_label = f"{i}/{total}" if total > 1 else ""
         is_training = activity.get("is_training")
         training_flag = "yes" if is_training else ""
-        segment = lookup_segment(
-            activity.get("product_brand", ""),
-            activity.get("product_name", "")
-        )
+        segment = lookup_segment(activity.get("product_name", ""))
         row = [
             now,
             rep_name,
             activity.get("customer_name", ""),
             activity.get("contact_person", ""),
             activity.get("contact_channel", ""),
-            activity.get("product_brand", ""),
             activity.get("product_name", ""),
+            segment,
             activity.get("quantity", ""),
             activity.get("deal_value_thb", ""),
             activity.get("activity_type", ""),
@@ -999,7 +908,6 @@ def append_to_sheets(parsed: dict, rep_name: str, raw_message: str, user_id: str
             item_label,
             "live",
             "",  # Manager Notes (blank, manual only)
-            segment,
         ]
         rows.append(row)
 
@@ -1015,30 +923,17 @@ def append_to_sheets(parsed: dict, rep_name: str, raw_message: str, user_id: str
         except Exception:
             pass
 
-        # 1. Write to rep's personal sheet (auto-create on first message)
-        rep_sheet = get_or_create_rep_sheet(spreadsheet, rep_name)
-        rep_sheet.append_rows(rows, value_input_option="USER_ENTERED")
-        print(f"[SHEETS] Saved {len(rows)} rows to '{rep_name}' personal sheet")
-        sys.stdout.flush()
-
-        # 2. Write to Combined sheet (dashboard source)
+        # 1. Write to Combined sheet (dashboard source)
         combined_sheet.append_rows(rows, value_input_option="USER_ENTERED")
         print(f"[SHEETS] Saved {len(rows)} rows to 'Combined' sheet")
         sys.stdout.flush()
 
-        # 3. Write to Live Data (permanent record, never cleared)
+        # 2. Write to Live Data (permanent record, never cleared)
         live_sheet = get_or_create_live_tab(spreadsheet)
         live_sheet.append_rows(rows, value_input_option="USER_ENTERED")
         print(f"[SHEETS] Saved {len(rows)} rows to 'Live Data' tab")
         sys.stdout.flush()
 
-        # 4. If any Megger deals, also copy to Major Opportunity tab
-        megger_rows = [r for r in rows if r[5] == "Megger"]  # col F (index 5) = Product Brand
-        if megger_rows:
-            mo_sheet = get_or_create_major_opportunity_sheet(spreadsheet)
-            mo_sheet.append_rows(megger_rows, value_input_option="USER_ENTERED")
-            print(f"[SHEETS] Copied {len(megger_rows)} Megger rows to 'Major Opportunity'")
-            sys.stdout.flush()
 
     return matches
 
@@ -1260,7 +1155,7 @@ class handler(BaseHTTPRequestHandler):
                 for m in matches:
                     val_str = f"฿{float(str(m['value']).replace(',', '')):,.0f}" if m['value'] else "—"
                     match_note += (f"\n• {m['batch_id']} | {m['customer']} / "
-                                   f"{m['brand']} {m['product']} / {val_str} / {m['stage']}")
+                                   f"{m['product']} / {val_str} / {m['stage']}")
                 match_note += "\n\nถ้าต้องการอัพเดทดีลเดิม พิมพ์: อัพเดท [Batch ID] ตามด้วยข้อมูลใหม่"
                 confirmation += match_note
 
