@@ -13,6 +13,9 @@ import re
 import urllib.request
 from http.server import BaseHTTPRequestHandler
 from datetime import datetime, timezone, timedelta
+
+# Ensure sibling modules are importable on Vercel's runtime
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from megger_segments import lookup_segment
 
 # NOTE: google.generativeai, gspread, google.oauth2 are imported lazily
