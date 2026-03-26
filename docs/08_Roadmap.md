@@ -27,7 +27,7 @@
 | 11 | Backup system with timestamped tabs (max 3) | Done |
 | 12 | Live Data tab — permanent record, separated from demo data | Done |
 | 13 | Source column to distinguish live vs sample data | Done |
-| 14 | Looker Studio dashboard (KPIs, pipeline chart, brand mix, activity feed) | Done |
+| 14 | Looker Studio dashboard (KPIs, pipeline chart, segment mix, activity feed) | Done |
 | 15 | Debug logging cleaned up for production | Done |
 
 ### Architecture

@@ -641,7 +641,7 @@ The manager's daily behavior in the first month matters more than any guide or t
 │  METRIC 4: Data Completeness                                                │
 │  ─────────────────────────────────────────────────────────────              │
 │  Definition: % of parsed activities that have all 3 key fields:            │
-│              customer_name + product_brand + deal_value_thb                │
+│              customer_name + product_name + deal_value_thb                │
 │  Target Month 1: 50%+ (many messages will be partial at first)            │
 │  Target Month 2: 65%+                                                      │
 │  Steady state:   70%+ (some activities genuinely have no price yet)       │
@@ -769,7 +769,7 @@ The bot checks for **5 key fields** in every report:
 | # | Field | Example |
 |---|-------|---------|
 | 1 | Customer name | PTT, SCG, กฟผ. |
-| 2 | Product brand | Megger, Fluke, CRC, Salisbury, SmartWasher, IK Sprayer |
+| 2 | Product name | MTO330, MIT525, DLRO200, Sverker900, TRAX280, etc. |
 | 3 | Deal value | 150K, 300,000, 1.5 ล้าน |
 | 4 | Activity type | เข้าพบ, โทร, เสนอราคา, ปิดดีล |
 | 5 | Sales stage | lead, quotation, negotiation, won, lost |
@@ -808,7 +808,7 @@ The bot queries the current Google Sheets data and generates a Thai-language sum
 
 - Total pipeline value (฿)
 - Number of active deals by sales stage (lead, quotation, negotiation, won, lost)
-- Top product brands by value
+- Top product segments by value
 - Recent activity count (this month)
 - Notable wins or large deals in progress
 
@@ -826,7 +826,7 @@ The bot queries the current Google Sheets data and generates a Thai-language sum
   • Negotiation: 3 ดีล (฿1,350,000)
   • Won: 2 ดีล (฿800,000)
 
-🏆 แบรนด์ที่ขายดี: Megger (฿2.1M), Fluke (฿1.5M)
+🏆 เซ็กเมนต์ที่ขายดี: PT (฿2.1M), GET (฿1.5M)
 📌 กิจกรรมเดือนนี้: 28 รายการ
 ```
 

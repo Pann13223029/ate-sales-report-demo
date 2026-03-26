@@ -153,11 +153,11 @@ Each rep gets a personal LINE push message listing their stale deals:
 ```
 📋 คุณมี 3 ดีลที่ไม่มีอัพเดท 7+ วัน:
 
-1. PTT / Megger MTO330 / ฿3,050,000 (12 วัน)
+1. PTT / MTO330 / ฿3,050,000 (12 วัน)
    📝 MSG-A1B2C
-2. IRPC / Megger DLRO200 / ฿1,450,000 (9 วัน)
+2. IRPC / DLRO200 / ฿1,450,000 (9 วัน)
    📝 MSG-D4E5F
-3. กฟภ. / Salisbury Insulating Gloves / ฿425,000 (7 วัน)
+3. กฟภ. / EGIL / ฿425,000 (7 วัน)
    📝 MSG-G6H7I
 
 พิมพ์อัพเดทได้เลยครับ เช่น:

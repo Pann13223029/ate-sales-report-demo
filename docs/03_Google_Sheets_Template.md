@@ -60,8 +60,8 @@ All data tabs (Sheet1, Live Data, Backup_*) share the same column layout.
 | C | Customer | String | Company name as stated by rep | `PTT` |
 | D | Contact Person | String | Customer contact name (if mentioned) | `คุณวิทยา` |
 | E | Contact Channel | String | Phone number or email of contact person (**mandatory**) | `081-234-5678` |
-| F | Product Brand | String | Brand from ATE portfolio | `Megger` |
-| G | Product Name | String | Product or model mentioned | `MTO330` |
+| F | Product Name | String | Product or model mentioned | `MTO330` |
+| G | Product Segment | Enum | Auto-matched from 431-product catalog | `PT` |
 | H | Quantity | Number | Quantity discussed or ordered | `2` |
 | I | Deal Value (THB) | Number | Deal value in Baht, comma-formatted | `285,000` |
 | J | Activity Type | String | Type of sales activity | `visit` |
@@ -90,7 +90,7 @@ Applied to data columns starting from row 2 onward.
 
 | Column | Dropdown Values |
 |---|---|
-| F (Product Brand) | Megger, Fluke, CRC, Salisbury, SmartWasher, IK Sprayer, HVOP, Other |
+| G (Product Segment) | CI, GET, LVI, MRM, PDIX, PP, PT |
 | J (Activity Type) | visit, call, quotation, follow_up, closed_won, closed_lost, sent_to_service, other |
 | K (Sales Stage) | lead, plan_to_visit, visited, negotiation, quotation_sent, bidding, closed_won, closed_lost, job_expired, equipment_defect |
 | L (Payment Status) | pending, deposit, paid |
@@ -139,7 +139,7 @@ Cell-only coloring (not full-row) is applied to three columns. Colors make pipel
 
 ### Partial Data Highlighting
 
-Rows missing mandatory fields (Customer, Contact Channel, Product Brand, Deal Value, Activity Type, Sales Stage) are highlighted with a light red background on the empty cells. This is applied by `populate_sample_data.py` when generating sample data.
+Rows missing mandatory fields (Customer, Contact Channel, Product Name, Deal Value, Activity Type, Sales Stage) are highlighted with a light red background on the empty cells. This is applied by `populate_sample_data.py` when generating sample data.
 
 ---
 
@@ -186,6 +186,6 @@ Looker Studio connects to Sheet1 as its data source. Key dashboard components:
 
 - **KPI scorecards:** Total pipeline value, deals won, deals lost
 - **Pipeline chart:** Stacked bar by sales stage
-- **Brand mix:** Pie/donut chart by product brand
+- **Segment mix:** Pie/donut chart by product segment
 - **Activity feed:** Recent entries table
 - **Data freshness:** Set to 1-minute refresh interval

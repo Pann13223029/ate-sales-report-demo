@@ -99,10 +99,10 @@ How to set bar colors:
 2. Under "Color by" or "Series" → click each bar color to customize
 3. If "Color by" only shows one option, use a Stacked bar chart with Sales Stage as both dimension and breakdown dimension
 
-#### C. Brand Breakdown (donut chart)
+#### C. Segment Breakdown (donut chart)
 
 1. Insert → Pie chart (set to Donut in style)
-2. **Dimension:** Product Brand
+2. **Dimension:** Product Segment
 3. **Metric:** SUM of Deal Value (THB)
 4. **Sort:** Metric descending
 5. **Style:** Show labels with % and value
@@ -110,7 +110,7 @@ How to set bar colors:
 #### D. Activity Feed (table)
 
 1. Insert → Table
-2. **Columns:** Timestamp, Rep Name, Customer, Product Brand, Product Name, Deal Value (THB), Activity Type, Sales Stage
+2. **Columns:** Timestamp, Rep Name, Customer, Product Name, Product Segment, Deal Value (THB), Activity Type, Sales Stage
 3. **Sort:** Timestamp descending
 4. **Rows per page:** 15-20
 5. **Style:** Compact, alternating row colors
@@ -165,14 +165,14 @@ This requires a calculated field:
 #### C. Close Reason Table
 
 1. Insert → Table
-2. **Columns:** Customer, Product Brand, Product Name, Deal Value (THB), Sales Stage, Close Reason
+2. **Columns:** Customer, Product Name, Product Segment, Deal Value (THB), Sales Stage, Close Reason
 3. **Sort:** Deal Value descending
 4. **Style:** Color the Sales Stage column (green for won, red for lost)
 
-#### D. Brand Win/Loss (stacked bar)
+#### D. Segment Win/Loss (stacked bar)
 
 1. Insert → Stacked bar chart
-2. **Dimension:** Product Brand
+2. **Dimension:** Product Segment
 3. **Breakdown dimension:** Sales Stage
 4. **Metric:** SUM of Deal Value (THB)
 5. **Colors:** Green for closed_won, Red for closed_lost
@@ -210,7 +210,7 @@ This requires a calculated field:
 #### B. Stale Deals Table (main component)
 
 1. Insert → Table
-2. **Columns:** Days Since Update, Rep Name, Customer, Product Brand, Product Name, Deal Value (THB), Sales Stage, Batch ID
+2. **Columns:** Days Since Update, Rep Name, Customer, Product Name, Product Segment, Deal Value (THB), Sales Stage, Batch ID
 3. **Sort:** Days Since Update descending (most stale first)
 4. **Style:** Conditional formatting on Days Since Update:
    - 7-14 days: yellow
@@ -250,14 +250,14 @@ This requires a calculated field:
 #### B. Archive Table
 
 1. Insert → Table
-2. **Columns:** Timestamp, Rep Name, Customer, Product Brand, Product Name, Deal Value (THB), Sales Stage, Close Reason
+2. **Columns:** Timestamp, Rep Name, Customer, Product Name, Product Segment, Deal Value (THB), Sales Stage, Close Reason
 3. **Sort:** Timestamp descending
 4. This shows why deals died (Close Reason) and which products had defects
 
-#### C. Expired by Brand (donut)
+#### C. Expired by Segment (donut)
 
 1. Insert → Pie chart
-2. **Dimension:** Product Brand
+2. **Dimension:** Product Segment
 3. **Metric:** Record Count
 4. **Filter:** Sales Stage = equipment_defect
 5. Shows which products have the most defects
@@ -301,8 +301,8 @@ Quick reference for the 24-column schema when building charts:
 | C | Customer | Dimension for customer analysis |
 | D | Contact Person | Table detail only |
 | E | Contact Channel | Dimension (phone/email/visit distribution) |
-| F | Product Brand | Dimension for brand breakdown |
-| G | Product Name | Table detail, product analysis |
+| F | Product Name | Table detail, product analysis |
+| G | Product Segment | Dimension for segment breakdown |
 | H | Quantity | Metric (SUM for volume analysis) |
 | I | Deal Value (THB) | **Primary metric** (SUM, AVG, COUNT) |
 | J | Activity Type | Dimension for activity breakdown |

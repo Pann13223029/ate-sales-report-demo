@@ -31,9 +31,9 @@
 | 2 | 7-day stale deal push notification to reps | Automation | Done |
 | 3 | Payment status: rename `partial` → `deposit` | Schema | Done |
 | 4 | Add Contact Channel column (phone, email, visit) | Schema | Done |
-| 5 | Individual sheet per rep + combined auto-sheet | Architecture | Done |
-| 6 | Visibility control: rep sees only own sheet, management sees all | Permissions | Done |
-| 7 | Separate "Major Opportunity" sheet for Megger | New Sheet | Done |
+| 5 | ~~Individual sheet per rep~~ | Architecture | Removed — all reps share Combined sheet |
+| 6 | ~~Visibility control~~ | Permissions | Removed — open visibility for all |
+| 7 | ~~Separate "Major Opportunity" sheet for Megger~~ | New Sheet | Removed — no data yet from management |
 | 8 | Service/warranty activity type (`sent_to_service`, no sales stage) | Activity Type | Done |
 | 9 | Switch to 1-on-1 LINE reporting (no group chat) | LINE Config | Done |
 | 10 | Training flag (Accompanying Rep + auto-flag) | New Columns | Done |
@@ -41,8 +41,8 @@
 | 12 | `job_expired` stage + hide from main dashboard | Sales Stage | Done |
 | 13 | Close Reason (AI-filled) + Manager Notes (manual) | New Columns | Done |
 | 14 | `bidding` stage + Bidding Date column (government procurement) | Sales Stage + Column | Done |
-| 15 | Add HVOP (KATO tech) to product brands | Brand List | Done |
-| 16 | Product segment auto-match from product name | Future (data pending) | Postponed |
+| 15 | ~~Add HVOP (KATO tech) to product brands~~ | Brand List | Removed — Product Brand column removed |
+| 16 | Product segment auto-match from product name | New Column | Done (431-product catalog) |
 
 ---
 
@@ -57,8 +57,8 @@
 | C | Customer | Existing | |
 | D | Contact Person | Existing | |
 | E | Contact Channel | **NEW** | phone / email / visit |
-| F | Product Brand | Existing | Add HVOP (KATO tech) |
-| G | Product Name | Existing | |
+| F | Product Name | Existing | (was col G — Product Brand removed) |
+| G | Product Segment | **NEW** | Auto-matched from 431-product catalog |
 | H | Quantity | Existing | |
 | I | Deal Value (THB) | Existing | |
 | J | Activity Type | Existing | Add `sent_to_service` |
@@ -83,7 +83,7 @@
 |-------|---------|---------|
 | Who/When | A-B | Timestamp + reporter |
 | Customer | C-E | Customer info + contact channel |
-| Product | F-H | Brand, name, quantity |
+| Product | F-H | Name, segment, quantity |
 | Deal | I-L | Value, activity, stage, payment |
 | Dates | M-N | Planned visit, bidding deadline |
 | Team | O-P | Accompanying rep, training flag |
@@ -131,11 +131,11 @@
 | `deposit` | Renamed from `partial` |
 | `paid` | Unchanged |
 
-### Product Brands (revised)
+### Product Brand → Product Segment (revised)
 
-Added: **HVOP (KATO tech)**
+Product Brand column **removed** entirely. Replaced by **Product Segment** (col G), auto-matched from a 431-product catalog via `megger_segments.py`.
 
-Full list: Megger, Fluke, CRC, Salisbury, SmartWasher, IK Sprayer, HVOP, Other
+7 segments: CI, GET, LVI, MRM, PDIX, PP, PT
 
 ---
 
@@ -145,36 +145,24 @@ Full list: Megger, Fluke, CRC, Salisbury, SmartWasher, IK Sprayer, HVOP, Other
 
 ```
 Spreadsheet
-├── Combined          ← Replaces Sheet1. All reps' data. Visible to all.
-├── สมชาย             ← Personal sheet. Protected: only สมชาย + management.
-├── วิภา              ← Personal sheet. Protected: only วิภา + management.
-├── ธนกฤต             ← Personal sheet. Protected: only ธนกฤต + management.
-├── ...               ← Auto-created on first message from new rep.
-├── Major Opportunity ← Auto-copy of all Megger deals.
+├── Combined          ← All reps' data. Visible to all. Looker Studio reads this.
 ├── Live Data         ← Permanent record. Never cleared.
+├── Rep Registry      ← LINE user_id → display name mapping.
 ├── Legend            ← Color coding + product segment reference.
 └── Backup_*          ← Timestamped backups (max 3).
 ```
+
+> **Note:** Per-rep personal sheets and Major Opportunity sheet were considered but removed. All reps share the Combined sheet with full visibility.
 
 ### Write Flow (per message)
 
 ```
 LINE message from rep
   → AI parses
-  → Write to rep's personal sheet (auto-create if first time)
   → Write to Combined sheet
   → Write to Live Data tab
-  → If Megger deal: also write to Major Opportunity tab
   → Reply to LINE
 ```
-
-### Individual Sheet Behavior
-
-- **Created dynamically** on rep's first message (no hardcoded config)
-- **Named** by LINE display name
-- **Protected** via Google Sheets API (only service account + rep can edit)
-- **Same 24-column schema** as Combined sheet
-- **Limitation:** True per-user view restriction requires separate spreadsheet files. Current approach uses protection (edit restriction, not view restriction).
 
 ### Reporting Mode
 
@@ -199,7 +187,7 @@ PTT MTO330 ลดราคาเหลือ 2.8 ล้าน
 ```
 → Bot detects existing PTT/MTO330 deal, shows match:
 > "พบดีลที่ตรงกัน:
-> 📋 MSG-A1B2C | PTT / Megger MTO330 / ฿3,050,000 / quotation_sent
+> 📋 MSG-A1B2C | PTT / MTO330 / ฿3,050,000 / quotation_sent
 >
 > ตอบ: `อัพเดท MSG-A1B2C` หรือพิมพ์ต่อเพื่อสร้างรายการใหม่"
 
@@ -210,17 +198,14 @@ PTT MTO330 ลดราคาเหลือ 2.8 ล้าน
 - **Recipients:** Each rep gets their own stale deal list via LINE push
 - **Message format:**
 > "คุณมี 3 ดีลที่ไม่มีอัพเดท 7+ วัน:
-> 1. PTT / Megger MTO330 / ฿3.05M (7 วัน)
-> 2. IRPC / Megger DLRO200 / ฿1.45M (12 วัน)
+> 1. PTT / MTO330 / ฿3.05M (7 วัน)
+> 2. IRPC / DLRO200 / ฿1.45M (12 วัน)
 >
 > พิมพ์อัพเดทได้เลยครับ หรือถ้าดีลจบแล้ว พิมพ์: อัพเดท MSG-XXXXX job_expired"
 
-### 5.3 Major Opportunity Sheet (Megger)
+### ~~5.3 Major Opportunity Sheet (Megger)~~ — Removed
 
-- Auto-copy **all** Megger deals to "Major Opportunity" tab
-- Same 24-column schema
-- Management filters what's "major" manually
-- Criteria can be refined later (e.g. value threshold)
+> Originally planned to auto-copy Megger deals. Removed — no data/criteria received from management yet.
 
 ### 5.4 Updated Rich Menu Help Text
 
@@ -241,7 +226,7 @@ Help message updated to include:
 Shows:
 - KPI scorecards: total pipeline value, deal count, avg deal size
 - Bar chart by Sales Stage
-- Brand breakdown (donut)
+- Segment breakdown (donut)
 - Activity feed (table)
 
 ### View 2: Win/Loss Analysis
@@ -252,7 +237,7 @@ Shows:
 - Won vs Lost comparison (value + count)
 - Win rate scorecard
 - Close Reason breakdown (table or word cloud)
-- Brand performance (which brands win/lose most)
+- Segment performance (which segments win/lose most)
 
 ### View 3: Stale Deals
 
@@ -280,15 +265,15 @@ Shows:
 | Schema expansion | 17 → 24 columns | 7 new fields cover all requirements without over-engineering |
 | Training Flag | Auto-derived from Accompanying Rep | Less manual input, AI detects from message context |
 | Close Reason | AI-filled on terminal stages only | Keeps column clean, no manual effort for reps |
-| Individual sheets | Dynamic creation on first message | Zero config, scales with team size |
-| Sheet protection | Google Sheets API protection | Edit restriction (not view). True privacy needs separate files (future) |
-| Combined sheet | Bot writes to both personal + combined | Real-time sync, simple, same as existing dual-write pattern |
-| Major Opportunity | Auto-copy ALL Megger deals | No value threshold — let management filter. Less logic, less risk |
+| ~~Individual sheets~~ | Removed | Management decided all reps can see each other's data |
+| ~~Sheet protection~~ | Removed | Not needed with shared visibility |
+| Combined sheet | Bot writes to Combined + Live Data | Real-time sync, simple dual-write pattern |
+| ~~Major Opportunity~~ | Removed | No data/criteria received from management yet |
 | Update entries | Explicit Batch ID + smart match detection | Batch ID = direct update. Smart match = show + ask |
 | Stale deal push | Weekly Monday cron + direct push to reps | Management requested direct push. Actionable with Batch IDs |
 | `job_expired` | Separate from `closed_lost` | Dead deals ≠ competitor losses. Keeps pipeline clean |
 | Dashboard views | 4 views: pipeline, win/loss, stale, expired | Each serves a different management need |
-| Product segments | Postponed | Data not yet received from management |
+| Product segments | Done | 431-product catalog in megger_segments.py, auto-matched from product name |
 
 ---
 
@@ -298,8 +283,8 @@ Shows:
 |---|------|--------|-------------|--------|
 | 1 | Update schema (24 columns) + AI prompt | 2 hrs | None | Done |
 | 2 | Update `populate_sample_data.py` for new schema | 1 hr | Task 1 | Done |
-| 3 | Individual sheets + combined + protection | 2 hrs | Task 1 | Done |
-| 4 | Major Opportunity auto-copy (Megger) | 30 min | Task 3 | Done |
+| 3 | ~~Individual sheets + combined + protection~~ | — | — | Removed |
+| 4 | ~~Major Opportunity auto-copy (Megger)~~ | — | — | Removed |
 | 5 | Update entry (`อัพเดท MSG-XXXXX`) | 2 hrs | Task 1 | Done |
 | 6 | Smart match detection on plain messages | 1 hr | Task 5 | Done |
 | 7 | Stale deal push (`/api/stale-check`) | 2 hrs | Task 3 | Done |
@@ -317,3 +302,4 @@ Shows:
 |------|--------|
 | 2026-03-15 | Document created from demo feedback + expert panel consensus |
 | 2026-03-18 | All 15 features implemented and deployed (feature #16 remains postponed) |
+| 2026-03-19 | Product Brand column removed. Product Segment (col G) added with 431-product catalog. Per-rep sheets and Major Opportunity sheet removed. |
