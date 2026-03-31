@@ -204,6 +204,7 @@ vercel env add LINE_CHANNEL_ACCESS_TOKEN
 vercel env add GEMINI_API_KEY
 vercel env add GOOGLE_SHEETS_ID
 vercel env add GOOGLE_SERVICE_ACCOUNT_JSON
+vercel env add CRON_SECRET
 
 # 3. Deploy
 vercel --prod

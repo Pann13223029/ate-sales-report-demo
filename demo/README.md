@@ -114,7 +114,7 @@ Product Segment (column G) is auto-matched from product name using a 431-product
 
 2. Navigate to the demo directory:
    ```bash
-   cd ate_sales_report_system_planning/demo
+   cd ate-sales-report-demo/demo
    ```
 
 3. Deploy:
@@ -130,6 +130,7 @@ Product Segment (column G) is auto-matched from product name using a 431-product
    vercel env add GROQ_API_KEY
    vercel env add GOOGLE_SHEETS_ID
    vercel env add GOOGLE_SERVICE_ACCOUNT_JSON
+   vercel env add CRON_SECRET
    ```
    For `GOOGLE_SERVICE_ACCOUNT_JSON`, paste the **entire content** of the JSON key file as one line.
 
@@ -167,12 +168,12 @@ python3 populate_sample_data.py --restore    # Restore from latest backup
    ไปเยี่ยม PTT วันนี้ เสนอ Megger MTO330 ราคา 150,000
    ```
 3. Bot should reply within 3-5 seconds with a Thai confirmation
-4. Check Google Sheets — new row in both Sheet1 and Live Data tab
+4. Check Google Sheets — new row in both Combined and Live Data tabs
 
 ### Step 7: Build Looker Studio Dashboard
 
 1. Go to https://lookerstudio.google.com → Create → Report
-2. Connect Google Sheets → Sheet1
+2. Connect Google Sheets → Combined
 3. Build 4 sections:
    - **KPI Scorecards:** Total pipeline, total deals, won deals, win rate
    - **Pipeline Chart:** Bar chart by Sales Stage (color per stage)

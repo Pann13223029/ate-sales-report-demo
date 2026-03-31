@@ -1082,10 +1082,10 @@ class handler(BaseHTTPRequestHandler):
         try:
             data = json.loads(body)
         except Exception:
-            self.send_response(200)
+            self.send_response(400)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
-            self.wfile.write(b'{"status": "ok"}')
+            self.wfile.write(b'{"error": "invalid json"}')
             return
 
         events = data.get("events", [])
