@@ -411,7 +411,28 @@ def _apply_cell_updates(sheet, row_numbers, cell_updates):
         sheet.update_cells(batch, value_input_option="USER_ENTERED")
 
 
-def handle_update_command(message_text, reply_token, rep_name):
+def _normalize_name(value: str) -> str:
+    return (value or "").strip().casefold()
+
+
+def _get_requester_names(spreadsheet, user_id: str, rep_name: str) -> set:
+    """Collect possible requester display names for ownership checks."""
+    names = {_normalize_name(rep_name)}
+    if not user_id:
+        return {n for n in names if n}
+
+    try:
+        reg = get_or_create_rep_registry(spreadsheet)
+        cell = reg.find(user_id, in_column=1)
+        display_name = reg.cell(cell.row, 2).value
+        names.add(_normalize_name(display_name))
+    except Exception:
+        pass
+
+    return {n for n in names if n}
+
+
+def handle_update_command(message_text, reply_token, rep_name, user_id=""):
     """Handle 'อัพเดท MSG-XXXXX ...' command. Returns True if handled."""
     match = UPDATE_PATTERN.match(message_text.strip())
     if not match:
@@ -435,6 +456,18 @@ def handle_update_command(message_text, reply_token, rep_name):
     if not row_numbers:
         reply_to_line(reply_token,
             f"ไม่พบรายการ {batch_id} ในระบบครับ กรุณาตรวจสอบ Batch ID อีกครั้ง")
+        return True
+
+    requester_names = _get_requester_names(spreadsheet, user_id, rep_name)
+    owner_names = set()
+    for row_num in row_numbers:
+        row = combined.row_values(row_num)
+        if len(row) > 1:
+            owner_names.add(_normalize_name(row[1]))
+
+    owner_names = {n for n in owner_names if n}
+    if owner_names and requester_names.isdisjoint(owner_names):
+        reply_to_line(reply_token, f"ไม่สามารถอัพเดท {batch_id} ได้ครับ รายการนี้เป็นของ rep คนอื่น")
         return True
 
     # Get existing data from first matching row for AI context
@@ -697,18 +730,37 @@ def _format_new_sheet(spreadsheet, sheet):
     ]})
 
 
+def _ensure_sheet_headers(spreadsheet, sheet, headers):
+    """Ensure a sheet has the expected header row before data rows are appended."""
+    row1 = sheet.row_values(1)
+    normalized_existing = [cell.strip() for cell in row1]
+
+    if normalized_existing[:len(headers)] == headers:
+        return sheet
+
+    if any(normalized_existing):
+        raise ValueError(
+            f"Sheet '{sheet.title}' is missing expected headers; refusing to overwrite existing row 1"
+        )
+
+    last_col = chr(ord("A") + len(headers) - 1)
+    sheet.update(range_name=f"A1:{last_col}1", values=[headers])
+    _format_new_sheet(spreadsheet, sheet)
+    return sheet
+
+
 def get_or_create_rep_registry(spreadsheet):
     """Get 'Rep Registry' tab (maps LINE user IDs to display names), creating if needed."""
     import gspread
     try:
-        return spreadsheet.worksheet("Rep Registry")
+        reg = spreadsheet.worksheet("Rep Registry")
     except gspread.exceptions.WorksheetNotFound:
         reg = spreadsheet.add_worksheet(title="Rep Registry", rows=50, cols=3)
         reg.update(range_name="A1:C1", values=[["User ID", "Display Name", "Last Active"]])
         _format_new_sheet(spreadsheet, reg)
         print("[SHEETS] Created 'Rep Registry' tab")
         sys.stdout.flush()
-        return reg
+    return _ensure_sheet_headers(spreadsheet, reg, ["User ID", "Display Name", "Last Active"])
 
 
 def register_rep(spreadsheet, user_id, display_name):
@@ -733,28 +785,10 @@ def get_or_create_live_tab(spreadsheet):
     """Get the 'Live Data' tab, creating it with headers if it doesn't exist."""
     import gspread
     try:
-        return spreadsheet.worksheet("Live Data")
+        live_sheet = spreadsheet.worksheet("Live Data")
     except gspread.exceptions.WorksheetNotFound:
         live_sheet = spreadsheet.add_worksheet(title="Live Data", rows=500, cols=24)
-        live_sheet.update(range_name="A1:X1", values=[LIVE_DATA_HEADERS])
-        # Format header + freeze + protect (permanent record, restricted)
         spreadsheet.batch_update({"requests": [
-            {
-                "repeatCell": {
-                    "range": {"sheetId": live_sheet.id, "startRowIndex": 0, "endRowIndex": 1},
-                    "cell": {"userEnteredFormat": {
-                        "backgroundColor": {"red": 0.15, "green": 0.3, "blue": 0.55},
-                        "textFormat": {"bold": True, "foregroundColor": {"red": 1, "green": 1, "blue": 1}},
-                    }},
-                    "fields": "userEnteredFormat(backgroundColor,textFormat)",
-                }
-            },
-            {
-                "updateSheetProperties": {
-                    "properties": {"sheetId": live_sheet.id, "gridProperties": {"frozenRowCount": 1}},
-                    "fields": "gridProperties.frozenRowCount",
-                }
-            },
             {
                 "addProtectedRange": {
                     "protectedRange": {
@@ -767,14 +801,14 @@ def get_or_create_live_tab(spreadsheet):
         ]})
         print("[SHEETS] Created 'Live Data' tab with headers + protection")
         sys.stdout.flush()
-        return live_sheet
+    return _ensure_sheet_headers(spreadsheet, live_sheet, LIVE_DATA_HEADERS)
 
 
 def get_or_create_combined_sheet(spreadsheet):
     """Get 'Combined' tab. If not found, rename Sheet1 to 'Combined' and protect it."""
     import gspread
     try:
-        return spreadsheet.worksheet("Combined")
+        combined = spreadsheet.worksheet("Combined")
     except gspread.exceptions.WorksheetNotFound:
         # First run with new code — rename Sheet1 to "Combined"
         sheet1 = spreadsheet.sheet1
@@ -791,7 +825,8 @@ def get_or_create_combined_sheet(spreadsheet):
         }]})
         print("[SHEETS] Renamed 'Sheet1' to 'Combined' with protection")
         sys.stdout.flush()
-        return sheet1
+        combined = sheet1
+    return _ensure_sheet_headers(spreadsheet, combined, LIVE_DATA_HEADERS)
 
 
 
@@ -1028,6 +1063,21 @@ class handler(BaseHTTPRequestHandler):
             self.wfile.write(b'{"status": "ok"}')
             return
 
+        if not LINE_CHANNEL_SECRET:
+            self.send_response(500)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(b'{"error": "missing LINE_CHANNEL_SECRET"}')
+            return
+
+        signature = self.headers.get("X-Line-Signature", "")
+        if not signature or not validate_signature(body, signature):
+            self.send_response(401)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(b'{"error": "invalid signature"}')
+            return
+
         # Parse body
         try:
             data = json.loads(body)
@@ -1105,7 +1155,7 @@ class handler(BaseHTTPRequestHandler):
         # Check for update command: อัพเดท MSG-XXXXX ...
         if UPDATE_PATTERN.match(message_text.strip()):
             try:
-                handle_update_command(message_text, reply_token, rep_name)
+                handle_update_command(message_text, reply_token, rep_name, user_id)
             except Exception as e:
                 print(f"[UPDATE] Error: {e}")
                 sys.stdout.flush()

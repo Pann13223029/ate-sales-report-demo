@@ -213,8 +213,15 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         """Stale deal check endpoint. Called by external cron."""
         # Security: verify cron secret
+        if not CRON_SECRET:
+            self.send_response(500)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(b'{"error": "missing CRON_SECRET"}')
+            return
+
         secret = self.headers.get("X-Cron-Secret", "")
-        if CRON_SECRET and secret != CRON_SECRET:
+        if secret != CRON_SECRET:
             self.send_response(401)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
