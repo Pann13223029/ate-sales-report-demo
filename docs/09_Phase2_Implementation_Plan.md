@@ -207,9 +207,15 @@ PTT MTO330 ลดราคาเหลือ 2.8 ล้าน
 
 > Originally planned to auto-copy Megger deals. Removed — no data/criteria received from management yet.
 
-### 5.4 Updated Rich Menu Help Text
+### 5.4 Updated Rich Menu (2 buttons)
 
-Help message updated to include:
+Rich Menu reduced from 4 to 2 buttons per management request — reps should not have direct access to Dashboard or Google Sheets.
+
+Remaining buttons:
+- **วิธีรายงาน** (How to Report) — sends keyword text
+- **วิธีอัพเดท** (How to Update) — sends keyword text
+
+Help messages updated to include:
 - New activity types (`sent_to_service`)
 - Update command (`อัพเดท MSG-XXXXXXXX`)
 - New stages (`plan_to_visit`, `bidding`, `job_expired`)

@@ -500,13 +500,13 @@ This is the exact Thai text to pin in the LINE group using the "Note" feature. C
 
 **Q9: เมนูด้านล่าง (Rich Menu) มีปุ่มอะไรบ้าง?**
 
-มี 4 ปุ่ม:
-- **สรุปยอด** — ดูสรุป pipeline ทันที
+มี 2 ปุ่ม:
 - **วิธีรายงาน** — ดูตัวอย่างข้อความรายงาน
-- **เปิด Dashboard** — เปิด Looker Studio ดู dashboard
-- **เปิด Sheets** — เปิด Google Sheets ดูข้อมูลดิบ
+- **วิธีอัพเดท** — ดูวิธีอัพเดทดีลเดิม
 
 ถ้าเมนูหาย กดไอคอนแป้นพิมพ์ (⌨) ด้านล่างจอเพื่อสลับกลับมา
+
+> หมายเหตุ: Dashboard และ Google Sheets สำหรับผู้จัดการเท่านั้น
 
 ---
 
@@ -728,16 +728,12 @@ The manager's daily behavior in the first month matters more than any guide or t
 
 ## 9. LINE Rich Menu
 
-The bot now has a **persistent Rich Menu** — a 4-button bar that appears at the bottom of the chat screen. Reps do not need to type commands; they can just tap.
+The bot has a **persistent Rich Menu** — a 2-button bar that appears at the bottom of the chat screen. Reps do not need to type commands; they can just tap.
 
 ```
 ┌─────────────────┬─────────────────┐
-│   สรุปยอด        │   วิธีรายงาน     │
-│  Monthly Summary │  How to Report  │
-├─────────────────┼─────────────────┤
-│  เปิด Dashboard  │   เปิด Sheets    │
-│  Open Looker     │  Open Google     │
-│  Studio          │  Sheets          │
+│   วิธีรายงาน     │   วิธีอัพเดท     │
+│  How to Report  │  How to Update  │
 └─────────────────┴─────────────────┘
 ```
 
@@ -745,16 +741,17 @@ The bot now has a **persistent Rich Menu** — a 4-button bar that appears at th
 
 | Button | Label | What It Does |
 |--------|-------|-------------|
-| Top-left | **สรุปยอด** (Monthly Summary) | Sends "สรุปยอด" keyword to the bot, which replies with a pipeline summary: total pipeline value, deals by stage, top brands, and recent activity count. |
-| Top-right | **วิธีรายงาน** (How to Report) | Sends "วิธีรายงาน" keyword to the bot, which replies with a quick-reference guide showing reporting examples (similar to Section 3B). |
-| Bottom-left | **เปิด Dashboard** | Opens the Looker Studio dashboard URL directly in the LINE in-app browser. Reps can view KPIs, pipeline charts, and activity feeds. |
-| Bottom-right | **เปิด Sheets** | Opens the Google Sheets spreadsheet directly. Useful for reps or managers who want to see raw data. |
+| Left | **วิธีรายงาน** (How to Report) | Sends "วิธีรายงาน" keyword to the bot, which replies with a quick-reference guide showing reporting examples (similar to Section 3B). |
+| Right | **วิธีอัพเดท** (How to Update) | Sends "วิธีอัพเดท" keyword to the bot, which replies with update command syntax and examples. |
+
+> **Note:** Dashboard and Google Sheets access is restricted to management only and is not available through the Rich Menu.
 
 ### Tips for Reps
 
 - The Rich Menu is always visible at the bottom of the chat. If it disappears, tap the keyboard icon (⌨) to toggle it back.
-- **สรุปยอด** is the quickest way to check your team's pipeline without leaving LINE.
 - **วิธีรายงาน** is a handy refresher — tap it anytime you forget how to format a message.
+- **วิธีอัพเดท** shows how to update existing deals using Batch IDs.
+- To view your pipeline summary, type **สรุป** in the chat.
 
 ---
 
@@ -800,7 +797,7 @@ Reps can request a **pipeline summary** anytime by typing a summary keyword in t
 Any of these will activate the summary:
 - **สรุป**
 - **สรุปยอด**
-- Or tap the **สรุปยอด** button on the Rich Menu (see Section 9)
+- Or type **สรุป** or **สรุปยอด** in the chat
 
 ### What the Bot Returns
 

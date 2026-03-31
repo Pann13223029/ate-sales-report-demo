@@ -1,5 +1,5 @@
 """
-Generate a 4-button LINE Rich Menu image (2500x843) for ATE Sales Report Bot.
+Generate a 2-button LINE Rich Menu image (2500x843) for ATE Sales Report Bot.
 
 Usage:
   python3 generate_rich_menu_image.py
@@ -20,18 +20,16 @@ TEXT_COLOR = (255, 255, 255)
 ICON_COLOR = (130, 180, 255)       # Light blue for icons
 ICON_ACCENT = (100, 220, 160)      # Green accent
 
-# Layout: main menu uses a 2x2 grid
+# Layout: main menu uses a 1x2 grid (2 buttons side by side)
 NUM_COLS = 2
-NUM_ROWS = 2
+NUM_ROWS = 1
 CELL_W = WIDTH // NUM_COLS
 CELL_H = HEIGHT // NUM_ROWS
 
-# Button definitions
+# Button definitions (Dashboard and Sheets removed per management request)
 BUTTONS = [
     {"thai": "วิธีรายงาน", "eng": "How to Report", "col": 0, "row": 0},
     {"thai": "วิธีอัพเดท", "eng": "How to Update", "col": 1, "row": 0},
-    {"thai": "เปิด Dashboard", "eng": "Dashboard", "col": 0, "row": 1},
-    {"thai": "เปิด Sheets", "eng": "Google Sheets", "col": 1, "row": 1},
 ]
 
 # Find Thai font
@@ -173,7 +171,7 @@ def draw_grid_icon(draw, cx, cy, size=70):
         draw.line([(x0, ry), (x1, ry)], fill=ICON_COLOR, width=2)
 
 
-ICON_DRAWERS = [draw_document_icon, draw_refresh_icon, draw_line_chart_icon, draw_grid_icon]
+ICON_DRAWERS = [draw_document_icon, draw_refresh_icon]
 
 
 # ---------------------------------------------------------------------------

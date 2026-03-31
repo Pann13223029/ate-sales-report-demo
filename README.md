@@ -95,7 +95,7 @@ The data is simultaneously written to 4 Google Sheets tabs and the dashboard upd
 | 📊 | **Update System** | Modify existing deals via `อัพเดท MSG-XXXXXXXX` — AI parses only changes, with Groq fallback |
 | 💬 | **Hard Validation** | Reports without phone/email are rejected before saving |
 | 💬 | **3-Tier Nudge** | Polite Thai hints for missing fields (0=none, 1-2=hint, 3+=hint+example) |
-| 💬 | **Rich Menu** | 4-button LINE interface (How to Report, How to Update, Open Dashboard, Open Sheets) |
+| 💬 | **Rich Menu** | 2-button LINE interface (How to Report, How to Update) — dashboard/sheets access restricted to management |
 | 🔒 | **Formula Injection Protection** | All cell values sanitized before writing to prevent spreadsheet formula attacks |
 | 🔒 | **Webhook Hardening** | 1MB body size limit, 2000-char message guard, event deduplication, timing-safe auth |
 | 🔒 | **AI Output Validation** | Parsed activity_type and sales_stage validated against known enums before writing |
@@ -124,11 +124,11 @@ The data is simultaneously written to 4 Google Sheets tabs and the dashboard upd
 
 ![LINE Rich Menu](demo/rich_menu.png)
 
-4-button persistent menu in LINE with bilingual Thai/English labels:
+2-button persistent menu in LINE with bilingual Thai/English labels:
 - **วิธีรายงาน** (How to Report) — shows reporting guide with examples
 - **วิธีอัพเดท** (How to Update) — shows update command syntax
-- **เปิด Dashboard** (Dashboard) — opens the Looker Studio report
-- **เปิด Sheets** (Google Sheets) — opens the spreadsheet directly
+
+> **Note:** Dashboard and Google Sheets access is restricted to management only and not exposed through the Rich Menu.
 
 ---
 
