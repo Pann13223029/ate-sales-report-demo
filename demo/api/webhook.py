@@ -388,7 +388,7 @@ def get_sheets_client():
     creds_dict = json.loads(GOOGLE_SERVICE_ACCOUNT_JSON)
     scopes = [
         "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/drive",
     ]
     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     return gspread.authorize(creds)
