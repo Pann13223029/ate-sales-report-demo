@@ -11,6 +11,7 @@ Security: Requires X-Cron-Secret header matching CRON_SECRET env var.
 import os
 import sys
 import json
+import hmac
 import urllib.request
 from http.server import BaseHTTPRequestHandler
 from datetime import datetime, timezone, timedelta
@@ -39,7 +40,7 @@ def get_sheets_client():
     creds_dict = json.loads(GOOGLE_SERVICE_ACCOUNT_JSON)
     scopes = [
         "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.file",
     ]
     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     return gspread.authorize(creds)
@@ -214,14 +215,14 @@ class handler(BaseHTTPRequestHandler):
         """Stale deal check endpoint. Called by external cron."""
         # Security: verify cron secret
         if not CRON_SECRET:
-            self.send_response(500)
+            self.send_response(503)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
-            self.wfile.write(b'{"error": "missing CRON_SECRET"}')
+            self.wfile.write(b'{"error": "service unavailable"}')
             return
 
         secret = self.headers.get("X-Cron-Secret", "")
-        if secret != CRON_SECRET:
+        if not hmac.compare_digest(secret, CRON_SECRET):
             self.send_response(401)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
@@ -252,7 +253,6 @@ class handler(BaseHTTPRequestHandler):
                 "status": "ok",
                 "stale_deals": total_stale,
                 "reps_notified": sent_count,
-                "reps_with_stale": list(stale_by_rep.keys()),
                 "timestamp": datetime.now(BKK_TZ).isoformat(),
             }).encode())
 
@@ -264,5 +264,5 @@ class handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps({
                 "status": "error",
-                "message": str(e)[:200],
+                "message": "Internal server error",
             }).encode())

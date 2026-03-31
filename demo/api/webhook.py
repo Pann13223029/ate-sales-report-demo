@@ -10,6 +10,7 @@ import hashlib
 import hmac
 import base64
 import re
+import time
 import urllib.request
 from http.server import BaseHTTPRequestHandler
 from datetime import datetime, timezone, timedelta
@@ -34,6 +35,94 @@ GOOGLE_SERVICE_ACCOUNT_JSON = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON", "")
 
 # Bangkok timezone (UTC+7)
 BKK_TZ = timezone(timedelta(hours=7))
+
+# Maximum webhook body size (1 MB)
+MAX_BODY_SIZE = 1_000_000
+
+# Maximum message length before AI parsing (2000 chars)
+MAX_MESSAGE_LENGTH = 2000
+
+# ---------------------------------------------------------------------------
+# Validation constants for AI output
+# ---------------------------------------------------------------------------
+
+VALID_ACTIVITY_TYPES = {
+    "visit", "call", "quotation", "follow_up",
+    "closed_won", "closed_lost", "sent_to_service", "other",
+}
+VALID_SALES_STAGES = {
+    "lead", "plan_to_visit", "visited", "negotiation",
+    "quotation_sent", "bidding", "closed_won", "closed_lost",
+    "job_expired", "equipment_defect",
+}
+
+# ---------------------------------------------------------------------------
+# Idempotency: prevent duplicate event processing on LINE webhook retries
+# ---------------------------------------------------------------------------
+
+_RECENT_EVENT_IDS = {}  # webhook_event_id -> timestamp
+
+
+def _is_duplicate_event(event_id: str) -> bool:
+    """Return True if this event was already processed recently."""
+    now = time.time()
+    # Evict entries older than 60 seconds
+    for eid in list(_RECENT_EVENT_IDS):
+        if now - _RECENT_EVENT_IDS[eid] > 60:
+            del _RECENT_EVENT_IDS[eid]
+    if event_id in _RECENT_EVENT_IDS:
+        return True
+    _RECENT_EVENT_IDS[event_id] = now
+    return False
+
+
+# ---------------------------------------------------------------------------
+# Helpers: safe cell value handling
+# ---------------------------------------------------------------------------
+
+def _safe(val, default=""):
+    """Coerce None to empty string for spreadsheet cells."""
+    return val if val is not None else default
+
+
+def _sanitize_cell(val):
+    """Prevent spreadsheet formula injection by escaping dangerous prefixes."""
+    if isinstance(val, str) and val and val[0] in ("=", "+", "-", "@", "\t", "\r"):
+        return "'" + val
+    return val
+
+
+def _extract_gemini_text(data: dict) -> str:
+    """Extract text from Gemini API response, raising ValueError on unexpected shape."""
+    try:
+        candidates = data.get("candidates")
+        if not candidates:
+            block_reason = data.get("promptFeedback", {}).get("blockReason", "unknown")
+            raise ValueError(f"Gemini returned no candidates (blockReason={block_reason})")
+        return candidates[0]["content"]["parts"][0]["text"]
+    except (KeyError, IndexError, TypeError) as exc:
+        raise ValueError(f"Unexpected Gemini response structure: {exc}") from exc
+
+
+def _strip_code_fences(text: str) -> str:
+    """Remove markdown code fences from AI response text."""
+    text = text.strip()
+    if text.startswith("```"):
+        lines = text.split("\n")
+        lines = [l for l in lines[1:] if l.strip() != "```"]
+        text = "\n".join(lines).strip()
+    return text
+
+
+def _validate_ai_output(parsed: dict):
+    """Validate and clamp AI-parsed output to known enum values."""
+    for activity in parsed.get("activities", []):
+        if activity.get("activity_type") not in VALID_ACTIVITY_TYPES:
+            activity["activity_type"] = "other"
+        stage = activity.get("sales_stage")
+        if stage and stage not in VALID_SALES_STAGES:
+            activity["sales_stage"] = None
+
 
 # ---------------------------------------------------------------------------
 # Gemini prompt for Thai/English sales message parsing
@@ -179,17 +268,11 @@ def parse_with_gemini(message_text: str) -> dict:
         error_body = http_err.read().decode("utf-8", errors="replace")
         print(f"[GEMINI] HTTP Error {http_err.code}: {error_body[:300]}")
         sys.stdout.flush()
-        raise ValueError(f"Gemini HTTP {http_err.code}: {error_body[:300]}")
+        raise ValueError(f"Gemini HTTP {http_err.code}")
 
-    # Extract text from response
-    text = data["candidates"][0]["content"]["parts"][0]["text"]
-
-    # Handle potential markdown code fences
-    text = text.strip()
-    if text.startswith("```"):
-        lines = text.split("\n")
-        lines = [l for l in lines[1:] if l.strip() != "```"]
-        text = "\n".join(lines).strip()
+    # Extract text from response (safely)
+    text = _extract_gemini_text(data)
+    text = _strip_code_fences(text)
 
     return json.loads(text)
 
@@ -217,10 +300,18 @@ def parse_with_groq(message_text: str) -> dict:
             "Content-Type": "application/json",
         },
     )
-    with urllib.request.urlopen(req, timeout=20) as resp:
-        data = json.loads(resp.read())
-
-    return json.loads(data["choices"][0]["message"]["content"])
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            data = json.loads(resp.read())
+        return json.loads(data["choices"][0]["message"]["content"])
+    except urllib.error.HTTPError as http_err:
+        print(f"[GROQ] HTTP Error {http_err.code}")
+        sys.stdout.flush()
+        raise ValueError(f"Groq HTTP {http_err.code}")
+    except (KeyError, IndexError, json.JSONDecodeError) as exc:
+        print(f"[GROQ] Response parse error: {exc}")
+        sys.stdout.flush()
+        raise ValueError(f"Groq response parse error: {exc}") from exc
 
 
 def parse_message(message_text: str) -> dict:
@@ -297,7 +388,7 @@ def get_sheets_client():
     creds_dict = json.loads(GOOGLE_SERVICE_ACCOUNT_JSON)
     scopes = [
         "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.file",
     ]
     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     return gspread.authorize(creds)
@@ -411,6 +502,46 @@ def _apply_cell_updates(sheet, row_numbers, cell_updates):
         sheet.update_cells(batch, value_input_option="USER_ENTERED")
 
 
+def _parse_update_with_ai(update_prompt: str) -> dict:
+    """Parse update command with Gemini, falling back to Groq."""
+    system_msg = "You extract field changes from Thai sales update messages. Return ONLY valid JSON."
+    try:
+        payload = json.dumps({
+            "contents": [{"role": "user", "parts": [{"text": update_prompt}]}],
+            "systemInstruction": {"parts": [{"text": system_msg}]},
+            "generationConfig": {"responseMimeType": "application/json", "temperature": 0}
+        }).encode()
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+        req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read())
+        text = _extract_gemini_text(data)
+        text = _strip_code_fences(text)
+        return json.loads(text)
+    except Exception as e:
+        print(f"[UPDATE] Gemini failed ({e}), trying Groq...")
+        sys.stdout.flush()
+        if not GROQ_API_KEY:
+            raise
+        payload = json.dumps({
+            "model": "llama-3.3-70b-versatile",
+            "messages": [
+                {"role": "system", "content": system_msg},
+                {"role": "user", "content": update_prompt},
+            ],
+            "temperature": 0,
+            "response_format": {"type": "json_object"},
+        }).encode()
+        req = urllib.request.Request(
+            "https://api.groq.com/openai/v1/chat/completions",
+            data=payload,
+            headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
+        )
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            data = json.loads(resp.read())
+        return json.loads(data["choices"][0]["message"]["content"])
+
+
 def _normalize_name(value: str) -> str:
     return (value or "").strip().casefold()
 
@@ -496,25 +627,7 @@ Parse values: "2.8ล้าน"=2800000, "150K"=150000, "แสนห้า"=150
 Return ONLY valid JSON with changed fields. Do NOT include unchanged fields."""
 
     try:
-        payload = json.dumps({
-            "contents": [{"role": "user", "parts": [{"text": update_prompt}]}],
-            "systemInstruction": {"parts": [{"text": "You extract field changes from Thai sales update messages. Return ONLY valid JSON."}]},
-            "generationConfig": {"responseMimeType": "application/json", "temperature": 0}
-        }).encode()
-
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
-        req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
-
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            data = json.loads(resp.read())
-
-        text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
-        if text.startswith("```"):
-            lines = text.split("\n")
-            lines = [l for l in lines[1:] if l.strip() != "```"]
-            text = "\n".join(lines).strip()
-
-        changes = json.loads(text)
+        changes = _parse_update_with_ai(update_prompt)
     except Exception as e:
         print(f"[UPDATE] AI parse error: {e}")
         sys.stdout.flush()
@@ -572,8 +685,9 @@ Return ONLY valid JSON with changed fields. Do NOT include unchanged fields."""
         if live_rows:
             _apply_cell_updates(live_sheet, live_rows, cell_updates)
             updated_sheets.append("Live Data")
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[UPDATE] Failed to update Live Data for {batch_id}: {e}")
+        sys.stdout.flush()
 
     # Build before→after reply
     change_lines = []
@@ -681,7 +795,7 @@ Format for LINE chat (plain text, no markdown).
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
             data = json.loads(resp.read())
-        summary = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+        summary = _extract_gemini_text(data).strip()
     except Exception as e:
         # Fallback: send raw stats
         won_value = stage_values.get("closed_won", 0)
@@ -877,8 +991,9 @@ def _detect_matching_deals(combined_sheet, activities):
             # Match: customer substring + same product name
             customer_match = (new_customer in existing_customer
                               or existing_customer in new_customer)
-            product_match = (new_product and new_product in existing_product
-                             or existing_product in new_product)
+            product_match = (new_product and existing_product and
+                             (new_product in existing_product
+                              or existing_product in new_product))
 
             if customer_match and product_match:
                 matches.append({
@@ -911,7 +1026,7 @@ def append_to_sheets(parsed: dict, rep_name: str, raw_message: str, user_id: str
     now = datetime.now(BKK_TZ).strftime("%Y-%m-%d %H:%M:%S")
 
     # Generate batch ID from timestamp hash (groups multi-activity messages)
-    batch_id = "MSG-" + hashlib.md5(f"{now}{rep_name}{raw_message}".encode()).hexdigest()[:5].upper()
+    batch_id = "MSG-" + hashlib.md5(f"{now}{rep_name}{raw_message}".encode()).hexdigest()[:8].upper()
     activities = parsed.get("activities", [])
     total = len(activities)
 
@@ -920,33 +1035,35 @@ def append_to_sheets(parsed: dict, rep_name: str, raw_message: str, user_id: str
         item_label = f"{i}/{total}" if total > 1 else ""
         is_training = activity.get("is_training")
         training_flag = "yes" if is_training else ""
-        segment = lookup_segment(activity.get("product_name", ""))
+        segment = lookup_segment(_safe(activity.get("product_name")))
         row = [
             now,
             rep_name,
-            activity.get("customer_name", ""),
-            activity.get("contact_person", ""),
-            activity.get("contact_channel", ""),
-            activity.get("product_name", ""),
+            _safe(activity.get("customer_name")),
+            _safe(activity.get("contact_person")),
+            _safe(activity.get("contact_channel")),
+            _safe(activity.get("product_name")),
             segment,
-            activity.get("quantity", ""),
-            activity.get("deal_value_thb", ""),
-            activity.get("activity_type", ""),
-            activity.get("sales_stage", ""),
-            activity.get("payment_status", ""),
-            activity.get("planned_visit_date", ""),
-            activity.get("bidding_date", ""),
-            activity.get("accompanying_rep", ""),
+            _safe(activity.get("quantity")),
+            _safe(activity.get("deal_value_thb")),
+            _safe(activity.get("activity_type")),
+            _safe(activity.get("sales_stage")),
+            _safe(activity.get("payment_status")),
+            _safe(activity.get("planned_visit_date")),
+            _safe(activity.get("bidding_date")),
+            _safe(activity.get("accompanying_rep")),
             training_flag,
-            activity.get("close_reason", ""),
-            activity.get("follow_up_notes", ""),
-            activity.get("summary_en", ""),
+            _safe(activity.get("close_reason")),
+            _safe(activity.get("follow_up_notes")),
+            _safe(activity.get("summary_en")),
             raw_message,
             batch_id,
             item_label,
             "live",
             "",  # Manager Notes (blank, manual only)
         ]
+        # Sanitize all string cells to prevent formula injection
+        row = [_sanitize_cell(v) if isinstance(v, str) else v for v in row]
         rows.append(row)
 
     matches = []
@@ -967,9 +1084,12 @@ def append_to_sheets(parsed: dict, rep_name: str, raw_message: str, user_id: str
         sys.stdout.flush()
 
         # 2. Write to Live Data (permanent record, never cleared)
-        live_sheet = get_or_create_live_tab(spreadsheet)
-        live_sheet.append_rows(rows, value_input_option="USER_ENTERED")
-        print(f"[SHEETS] Saved {len(rows)} rows to 'Live Data' tab")
+        try:
+            live_sheet = get_or_create_live_tab(spreadsheet)
+            live_sheet.append_rows(rows, value_input_option="USER_ENTERED")
+            print(f"[SHEETS] Saved {len(rows)} rows to 'Live Data' tab")
+        except Exception as e:
+            print(f"[SHEETS] WARNING: Combined ok but Live Data write failed: {e}")
         sys.stdout.flush()
 
 
@@ -995,7 +1115,11 @@ def reply_to_line(reply_token: str, message_text: str):
             "Content-Type": "application/json",
         },
     )
-    urllib.request.urlopen(req, timeout=10)
+    try:
+        urllib.request.urlopen(req, timeout=10)
+    except Exception as e:
+        print(f"[LINE] Reply failed: {e}")
+        sys.stdout.flush()
 
 
 def get_line_profile(user_id: str, group_id: str = None) -> str:
@@ -1053,6 +1177,12 @@ class handler(BaseHTTPRequestHandler):
     def do_POST(self):
         """LINE webhook handler."""
         content_length = int(self.headers.get("Content-Length", 0))
+        if content_length > MAX_BODY_SIZE:
+            self.send_response(413)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(b'{"error": "payload too large"}')
+            return
         body = self.rfile.read(content_length)
 
         # Handle empty body (LINE verify)
@@ -1064,10 +1194,10 @@ class handler(BaseHTTPRequestHandler):
             return
 
         if not LINE_CHANNEL_SECRET:
-            self.send_response(500)
+            self.send_response(503)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
-            self.wfile.write(b'{"error": "missing LINE_CHANNEL_SECRET"}')
+            self.wfile.write(b'{"error": "service unavailable"}')
             return
 
         signature = self.headers.get("X-Line-Signature", "")
@@ -1119,6 +1249,13 @@ class handler(BaseHTTPRequestHandler):
         if event.get("message", {}).get("type") != "text":
             return
 
+        # Idempotency: skip duplicate events (LINE retries)
+        webhook_event_id = event.get("webhookEventId", "")
+        if webhook_event_id and _is_duplicate_event(webhook_event_id):
+            print(f"[MSG] Skipping duplicate event {webhook_event_id}")
+            sys.stdout.flush()
+            return
+
         message_text = event["message"]["text"]
         reply_token = event["replyToken"]
         user_id = event.get("source", {}).get("userId", "unknown")
@@ -1130,8 +1267,14 @@ class handler(BaseHTTPRequestHandler):
         except Exception:
             rep_name = user_id
 
-        print(f"[MSG] {rep_name}: {message_text[:80]}")
+        print(f"[MSG] {rep_name}: <message received, {len(message_text)} chars>")
         sys.stdout.flush()
+
+        # Message length guard
+        if len(message_text) > MAX_MESSAGE_LENGTH:
+            reply_to_line(reply_token,
+                f"ข้อความยาวเกินไปครับ กรุณาส่งไม่เกิน {MAX_MESSAGE_LENGTH} ตัวอักษร")
+            return
 
         # Check for Rich Menu / command keywords
         msg_lower = message_text.strip().lower()
@@ -1169,6 +1312,9 @@ class handler(BaseHTTPRequestHandler):
             # If not a sales report, ignore silently
             if not parsed.get("is_sales_report", False):
                 return
+
+            # Validate AI output against known enums
+            _validate_ai_output(parsed)
 
             # Step 1b: Block if contact_channel is missing (mandatory)
             activities = parsed.get("activities", [])

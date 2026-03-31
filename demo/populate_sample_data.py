@@ -20,7 +20,10 @@ from megger_segments import lookup_segment
 # Config
 # ---------------------------------------------------------------------------
 
-GOOGLE_SHEETS_ID = os.environ.get("GOOGLE_SHEETS_ID", "1N8urzMgcVBjJ3iv5ACPtMP-pG70rtlaHQ6v3iTJ48wY")
+GOOGLE_SHEETS_ID = os.environ.get("GOOGLE_SHEETS_ID")
+if not GOOGLE_SHEETS_ID:
+    print("ERROR: Set GOOGLE_SHEETS_ID environment variable")
+    sys.exit(1)
 BKK_TZ = timezone(timedelta(hours=7))
 
 # Load service account from file
@@ -42,7 +45,7 @@ client = gspread.authorize(creds)
 
 def make_batch_id(timestamp, rep_name, text):
     raw = f"{timestamp}|{rep_name}|{text}"
-    return "MSG-" + hashlib.md5(raw.encode()).hexdigest()[:5].upper()
+    return "MSG-" + hashlib.md5(raw.encode()).hexdigest()[:8].upper()
 
 
 # ---------------------------------------------------------------------------
