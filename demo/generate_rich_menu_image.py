@@ -20,16 +20,17 @@ TEXT_COLOR = (255, 255, 255)
 ICON_COLOR = (130, 180, 255)       # Light blue for icons
 ICON_ACCENT = (100, 220, 160)      # Green accent
 
-# Layout: main menu uses a 1x2 grid (2 buttons side by side)
-NUM_COLS = 2
+# Layout: main menu uses a 1x3 grid (3 buttons side by side)
+NUM_COLS = 3
 NUM_ROWS = 1
 CELL_W = WIDTH // NUM_COLS
 CELL_H = HEIGHT // NUM_ROWS
 
-# Button definitions (Dashboard and Sheets removed per management request)
+# Button definitions (Dashboard removed per management request; Sheets kept)
 BUTTONS = [
     {"thai": "วิธีรายงาน", "eng": "How to Report", "col": 0, "row": 0},
     {"thai": "วิธีอัพเดท", "eng": "How to Update", "col": 1, "row": 0},
+    {"thai": "เปิด Sheets", "eng": "Google Sheets", "col": 2, "row": 0},
 ]
 
 # Find Thai font
@@ -171,7 +172,7 @@ def draw_grid_icon(draw, cx, cy, size=70):
         draw.line([(x0, ry), (x1, ry)], fill=ICON_COLOR, width=2)
 
 
-ICON_DRAWERS = [draw_document_icon, draw_refresh_icon]
+ICON_DRAWERS = [draw_document_icon, draw_refresh_icon, draw_grid_icon]
 
 
 # ---------------------------------------------------------------------------

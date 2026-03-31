@@ -500,13 +500,14 @@ This is the exact Thai text to pin in the LINE group using the "Note" feature. C
 
 **Q9: เมนูด้านล่าง (Rich Menu) มีปุ่มอะไรบ้าง?**
 
-มี 2 ปุ่ม:
+มี 3 ปุ่ม:
 - **วิธีรายงาน** — ดูตัวอย่างข้อความรายงาน
 - **วิธีอัพเดท** — ดูวิธีอัพเดทดีลเดิม
+- **เปิด Sheets** — เปิด Google Sheets ดูข้อมูล
 
 ถ้าเมนูหาย กดไอคอนแป้นพิมพ์ (⌨) ด้านล่างจอเพื่อสลับกลับมา
 
-> หมายเหตุ: Dashboard และ Google Sheets สำหรับผู้จัดการเท่านั้น
+> หมายเหตุ: Dashboard สำหรับผู้จัดการเท่านั้น
 
 ---
 
@@ -728,13 +729,13 @@ The manager's daily behavior in the first month matters more than any guide or t
 
 ## 9. LINE Rich Menu
 
-The bot has a **persistent Rich Menu** — a 2-button bar that appears at the bottom of the chat screen. Reps do not need to type commands; they can just tap.
+The bot has a **persistent Rich Menu** — a 3-button bar that appears at the bottom of the chat screen. Reps do not need to type commands; they can just tap.
 
 ```
-┌─────────────────┬─────────────────┐
-│   วิธีรายงาน     │   วิธีอัพเดท     │
-│  How to Report  │  How to Update  │
-└─────────────────┴─────────────────┘
+┌──────────────┬──────────────┬──────────────┐
+│  วิธีรายงาน   │  วิธีอัพเดท   │  เปิด Sheets │
+│ How to Report│ How to Update│ Google Sheets│
+└──────────────┴──────────────┴──────────────┘
 ```
 
 ### Button Details
@@ -742,15 +743,17 @@ The bot has a **persistent Rich Menu** — a 2-button bar that appears at the bo
 | Button | Label | What It Does |
 |--------|-------|-------------|
 | Left | **วิธีรายงาน** (How to Report) | Sends "วิธีรายงาน" keyword to the bot, which replies with a quick-reference guide showing reporting examples (similar to Section 3B). |
-| Right | **วิธีอัพเดท** (How to Update) | Sends "วิธีอัพเดท" keyword to the bot, which replies with update command syntax and examples. |
+| Center | **วิธีอัพเดท** (How to Update) | Sends "วิธีอัพเดท" keyword to the bot, which replies with update command syntax and examples. |
+| Right | **เปิด Sheets** (Google Sheets) | Opens the Google Sheets spreadsheet directly in the LINE in-app browser. |
 
-> **Note:** Dashboard and Google Sheets access is restricted to management only and is not available through the Rich Menu.
+> **Note:** Dashboard access is restricted to management only and is not available through the Rich Menu.
 
 ### Tips for Reps
 
 - The Rich Menu is always visible at the bottom of the chat. If it disappears, tap the keyboard icon (⌨) to toggle it back.
 - **วิธีรายงาน** is a handy refresher — tap it anytime you forget how to format a message.
 - **วิธีอัพเดท** shows how to update existing deals using Batch IDs.
+- **เปิด Sheets** lets you view the data directly in Google Sheets.
 - To view your pipeline summary, type **สรุป** in the chat.
 
 ---

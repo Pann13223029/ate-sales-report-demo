@@ -207,13 +207,14 @@ PTT MTO330 ลดราคาเหลือ 2.8 ล้าน
 
 > Originally planned to auto-copy Megger deals. Removed — no data/criteria received from management yet.
 
-### 5.4 Updated Rich Menu (2 buttons)
+### 5.4 Updated Rich Menu (3 buttons)
 
-Rich Menu reduced from 4 to 2 buttons per management request — reps should not have direct access to Dashboard or Google Sheets.
+Rich Menu changed from 4 to 3 buttons per management request — dashboard access restricted to management only, Sheets access kept for reps.
 
-Remaining buttons:
+Buttons:
 - **วิธีรายงาน** (How to Report) — sends keyword text
 - **วิธีอัพเดท** (How to Update) — sends keyword text
+- **เปิด Sheets** (Google Sheets) — opens spreadsheet via URI
 
 Help messages updated to include:
 - New activity types (`sent_to_service`)

@@ -85,7 +85,7 @@ Phone (LINE) → Vercel (Python) → Gemini AI → Google Sheets → Looker Stud
 | # | Feature | Effort | Description | Status |
 |---|---------|--------|-------------|--------|
 | 1 | **Monthly Summary + On-demand** | 3 hrs | Auto-push on 1st of month + on-demand via "สรุป" keyword. Gemini generates natural Thai summary from pipeline data. Monthly cadence fits ATE's cyclical sales (industrial equipment, 2-6 month deal cycles). | **On-demand: DONE.** Monthly auto-push cron: pending. |
-| 2 | **LINE Rich Menu** | 2 hrs | 2-button persistent menu: วิธีรายงาน (how to report), วิธีอัพเดท (how to update). Dashboard/Sheets access restricted to management. Setup via API script + Pillow-generated image. | **DONE** |
+| 2 | **LINE Rich Menu** | 2 hrs | 3-button persistent menu: วิธีรายงาน, วิธีอัพเดท, เปิด Sheets. Dashboard access restricted to management only. Setup via API script + Pillow-generated image. | **DONE** |
 
 ### P2 — Enhance
 
@@ -107,7 +107,7 @@ Phone (LINE) → Vercel (Python) → Gemini AI → Google Sheets → Looker Stud
 |----------|--------|-----------|
 | Summary cadence | Monthly + on-demand | Industrial equipment has long sales cycles (2-6 months). Weekly summaries would highlight slow periods unnecessarily. |
 | Summary AI | Gemini | Free tier (500 req/day) has plenty of headroom. 1 summary call is negligible vs 60+ daily parse calls. |
-| Rich Menu | API script + Pillow, 2 buttons only | Reproducible, version-controlled. Dashboard/Sheets buttons removed per management — reps should not access raw data. |
+| Rich Menu | API script + Pillow, 3 buttons | Reproducible, version-controlled. Dashboard button removed per management — reps keep Sheets access but not the dashboard. |
 | Removed: Voice transcription | Cut | Low priority — reps type messages fine. Adds complexity (Whisper API) for little demo impact. |
 | Removed: Multi-group support | Cut | Not needed for initial team of 5-6 reps in single group. |
 | Removed: Rep leaderboard | Cut | Risk of negative competition culture. Revisit after team feedback. |

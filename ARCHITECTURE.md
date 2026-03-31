@@ -272,16 +272,17 @@ Keywords checked in order (case-insensitive):
 4. **Update command:** regex `^(อัพเดท|อัพเดต|update|แก้ไข)\s+(MSG-[A-Za-z0-9]+)\s*(.*)`
 5. **Sales report:** everything else → AI parsing pipeline
 
-### 9.3 Rich Menu (2 buttons)
+### 9.3 Rich Menu (3 buttons)
 
-1x2 layout on 2500x843 canvas:
+1x3 layout on 2500x843 canvas:
 ```
-┌─────────────────┬─────────────────┐
-│ วิธีรายงาน       │ วิธีอัพเดท       │
-└─────────────────┴─────────────────┘
+┌──────────────┬──────────────┬──────────────┐
+│ วิธีรายงาน    │ วิธีอัพเดท    │ เปิด Sheets  │
+└──────────────┴──────────────┴──────────────┘
 ```
-- Both buttons send keyword text that triggers the help/update guide responses
-- Dashboard and Google Sheets access is restricted to management only (not exposed to reps)
+- Left/center buttons send keyword text that triggers the help/update guide responses
+- Right button opens Google Sheets directly (URI action)
+- Dashboard access is restricted to management only (not exposed to reps)
 
 ### 9.4 Push Notifications
 

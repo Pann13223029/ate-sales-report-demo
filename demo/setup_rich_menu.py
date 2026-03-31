@@ -7,6 +7,7 @@ Run once after deployment:
 Requires:
   - LINE_CHANNEL_ACCESS_TOKEN in .env or environment
   - rich_menu.png in same directory
+  - Google Sheets URL or GOOGLE_SHEETS_ID
 """
 
 import os
@@ -41,10 +42,19 @@ def load_env_file():
 load_env_file()
 
 TOKEN = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN", "")
+GOOGLE_SHEETS_ID = os.environ.get("GOOGLE_SHEETS_ID", "")
+SHEETS_URL = os.environ.get("SHEETS_URL", "")
 
 if not TOKEN:
     print("ERROR: LINE_CHANNEL_ACCESS_TOKEN not found.")
     print("Set it as environment variable, ENV_FILE, or in .env file.")
+    exit(1)
+
+if not SHEETS_URL and GOOGLE_SHEETS_ID:
+    SHEETS_URL = f"https://docs.google.com/spreadsheets/d/{GOOGLE_SHEETS_ID}/edit"
+
+if not SHEETS_URL:
+    print("ERROR: SHEETS_URL or GOOGLE_SHEETS_ID is required.")
     exit(1)
 
 
@@ -102,9 +112,10 @@ def delete_existing_menus():
 
 
 def create_rich_menu():
-    """Create the rich menu with 2 buttons in a 1x2 layout."""
+    """Create the rich menu with 3 buttons in a 1x3 layout."""
 
-    cell_w = 2500 // 2
+    cell_w = 2500 // 3
+    last_w = 2500 - cell_w * 2  # last cell absorbs remainder
 
     menu_data = {
         "size": {"width": 2500, "height": 843},
@@ -119,6 +130,10 @@ def create_rich_menu():
             {
                 "bounds": {"x": cell_w, "y": 0, "width": cell_w, "height": 843},
                 "action": {"type": "message", "text": "วิธีอัพเดท"}
+            },
+            {
+                "bounds": {"x": cell_w * 2, "y": 0, "width": last_w, "height": 843},
+                "action": {"type": "uri", "uri": SHEETS_URL}
             },
         ]
     }
