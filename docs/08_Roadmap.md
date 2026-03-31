@@ -1,6 +1,6 @@
 # ATE Sales Report System — Roadmap
 
-> **Last updated:** 2026-03-14
+> **Last updated:** 2026-03-31
 
 ---
 
@@ -58,6 +58,28 @@ Phone (LINE) → Vercel (Python) → Gemini AI → Google Sheets → Looker Stud
 **Goal:** Turn the demo into a tool the sales team uses daily.
 **Timeline:** Estimated 2-3 weeks after demo approval.
 
+### Security & Reliability Hardening (Completed — Mar 31)
+
+| # | Feature | Status |
+|---|---------|--------|
+| 1 | Formula injection protection on all cell writes | Done |
+| 2 | Timing-safe CRON_SECRET comparison (`hmac.compare_digest`) | Done |
+| 3 | Batch ID collision fix (5→8 hex chars) | Done |
+| 4 | Operator precedence bug fix in deal matching | Done |
+| 5 | None→"None" cell value fix | Done |
+| 6 | Gemini response parsing hardened (`_extract_gemini_text`) | Done |
+| 7 | Error responses sanitized (no internal details leaked) | Done |
+| 8 | 1MB body size limit + 2000-char message guard | Done |
+| 9 | Event deduplication (prevents LINE retry duplicates) | Done |
+| 10 | AI output validation (enums clamped to known values) | Done |
+| 11 | Groq fallback for update command (was Gemini-only) | Done |
+| 12 | `reply_to_line` error handling (no longer crashes handler) | Done |
+| 13 | Live Data write failure logging (was silent `except: pass`) | Done |
+| 14 | Google Drive scope reduced (`drive` → `drive.file`) | Done |
+| 15 | Hardcoded Google Sheets ID removed from populate script | Done |
+| 16 | Message content redacted from logs (privacy) | Done |
+| 17 | Missing secrets return 503 (never reveals which secret) | Done |
+
 ### P1 — Build Next (before full rollout)
 
 | # | Feature | Effort | Description | Status |
@@ -112,3 +134,5 @@ Phone (LINE) → Vercel (Python) → Gemini AI → Google Sheets → Looker Stud
 |---------|------|---------|
 | v1.0 | 2026-03-11 | Core pipeline — LINE → Gemini → Sheets → Reply. Includes nudge system, batch IDs, sample data, Looker Studio dashboard, backup system, Live Data tab. |
 | v1.1 | 2026-03-11 | Rich Menu (4 buttons) + on-demand summary via "สรุป"/"สรุปยอด" keyword + roadmap document. |
+| v2.0 | 2026-03-18 | Phase 2 features: 24-column schema, stale deal cron, update command, smart match, contact validation, training flag, bidding, close reasons, product segments (431 products). |
+| v2.1 | 2026-03-31 | Security & reliability hardening: 17 fixes across webhook.py, stale_check.py, populate_sample_data.py. Formula injection protection, timing-safe auth, event dedup, AI output validation, Groq fallback for updates, batch ID collision fix (5→8 hex), error sanitization. |

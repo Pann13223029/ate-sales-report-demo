@@ -16,7 +16,7 @@ Phone (LINE) → Vercel (Python) → Gemini AI → Google Sheets → Looker Stud
 
 | Feature | Description |
 |---------|-------------|
-| **AI Parsing** | Gemini 2.5 Flash (primary) + Groq Llama 3.3 70B (fallback) |
+| **AI Parsing** | Gemini 2.5 Flash (primary) + Groq Llama 3.3 70B (fallback) — for both reports and updates |
 | **Thai + English** | Handles mixed-language messages, Thai currency slang (แสนห้า, 1.5ล้าน) |
 | **Multi-activity** | Single message with multiple products → multiple rows, grouped by Batch ID |
 | **Nudge System** | Gently reminds reps when mandatory fields are missing (3-tier: none, hint, hint+example) |
@@ -25,6 +25,8 @@ Phone (LINE) → Vercel (Python) → Gemini AI → Google Sheets → Looker Stud
 | **Backup System** | Timestamped backup tabs before sample data regeneration (max 3 kept) |
 | **Sheet Formatting** | Conditional cell coloring, data validation dropdowns, frozen headers |
 | **Partial Data Highlighting** | Rows with missing mandatory fields highlighted in light red |
+| **Security Hardening** | Formula injection protection, 1MB body limit, 2000-char message guard, event dedup |
+| **AI Output Validation** | Activity type and sales stage validated against known enums; null values safely handled |
 | **Dashboard** | Looker Studio with KPIs, pipeline chart, segment mix, activity feed |
 
 ## Google Sheets Structure
@@ -201,19 +203,24 @@ The nudge tone is soft: "ถ้าสะดวก ครั้งหน้าแ
 |---------|----------|
 | Bot doesn't reply | Check Vercel logs: `vercel logs` |
 | "Invalid signature" error | Verify `LINE_CHANNEL_SECRET` is correct |
-| Gemini fails | Groq fallback kicks in automatically. Check `GROQ_API_KEY` |
+| "service unavailable" 503 | A required env var is missing — check all 7 variables are set |
+| "payload too large" 413 | Webhook body exceeds 1MB limit — LINE payloads are typically <10KB |
+| Message too long error | Messages over 2,000 characters are rejected — ask rep to shorten |
+| Gemini fails | Groq fallback kicks in automatically for both reports and updates. Check `GROQ_API_KEY` |
 | Sheets not updating | Verify service account has Editor access to the spreadsheet |
 | Dashboard not refreshing | Set data freshness to 1 minute. Click refresh in Looker Studio |
 | Sample data in wrong columns | Run `populate_sample_data.py --no-backup` to reset |
 | Live Data tab missing | Auto-created on first LINE message. Send a test message |
+| Duplicate rows in Sheets | Event dedup handles LINE retries automatically; check for manual re-sends |
 
 ## File Structure
 
 ```
 demo/
 ├── api/
-│   ├── webhook.py              # Main serverless function (LINE → Gemini → Sheets → Reply)
-│   └── stale_check.py          # Stale deal scan + push notifications
+│   ├── webhook.py              # Main serverless function (1,400+ lines — LINE → Gemini → Sheets → Reply)
+│   ├── stale_check.py          # Stale deal scan + push notifications (270 lines)
+│   └── megger_segments.py      # 431-product → 7-segment lookup
 ├── populate_sample_data.py     # Generate 31 sample rows + formatting + backup system
 ├── vercel.json                 # Vercel routing config
 ├── requirements.txt            # Python dependencies (gspread, google-auth)

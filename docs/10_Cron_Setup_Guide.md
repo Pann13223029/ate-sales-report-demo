@@ -74,10 +74,11 @@ Check the output for the JSON response:
   "status": "ok",
   "stale_deals": 5,
   "reps_notified": 3,
-  "reps_with_stale": ["สมชาย", "วิภา", "ธนกฤต"],
   "timestamp": "2026-03-17T08:00:05+07:00"
 }
 ```
+
+> **Note:** Rep names are no longer included in the response for privacy. The endpoint only returns aggregate counts.
 
 ---
 
@@ -122,7 +123,6 @@ crontab -e
   "status": "ok",
   "stale_deals": 5,
   "reps_notified": 3,
-  "reps_with_stale": ["สมชาย", "วิภา"],
   "timestamp": "2026-03-17T08:00:05+07:00"
 }
 ```
@@ -143,12 +143,22 @@ crontab -e
 }
 ```
 
-**Misconfigured (500):**
+**Misconfigured (503):**
 ```json
 {
-  "error": "missing CRON_SECRET"
+  "error": "service unavailable"
 }
 ```
+
+**Server Error (500):**
+```json
+{
+  "status": "error",
+  "message": "Internal server error"
+}
+```
+
+> **Security note:** Error responses never contain internal details. Detailed errors are logged server-side only. The cron secret is validated using constant-time comparison (`hmac.compare_digest`) to prevent timing attacks.
 
 ---
 
@@ -160,15 +170,15 @@ Each rep gets a personal LINE push message listing their stale deals:
 📋 คุณมี 3 ดีลที่ไม่มีอัพเดท 7+ วัน:
 
 1. PTT / MTO330 / ฿3,050,000 (12 วัน)
-   📝 MSG-A1B2C
+   📝 MSG-A1B2C3D4
 2. IRPC / DLRO200 / ฿1,450,000 (9 วัน)
-   📝 MSG-D4E5F
+   📝 MSG-D4E5F6A7
 3. กฟภ. / EGIL / ฿425,000 (7 วัน)
-   📝 MSG-G6H7I
+   📝 MSG-G6H7I8B9
 
 พิมพ์อัพเดทได้เลยครับ เช่น:
-อัพเดท MSG-A1B2C สถานะเจรจา ราคา...
-อัพเดท MSG-A1B2C job_expired ลูกค้าตัดงบ
+อัพเดท MSG-A1B2C3D4 สถานะเจรจา ราคา...
+อัพเดท MSG-A1B2C3D4 job_expired ลูกค้าตัดงบ
 ```
 
 ---

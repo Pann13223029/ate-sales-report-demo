@@ -45,25 +45,29 @@ All other integrations (LINE, Gemini, Groq) use `urllib.request` directly.
 ### 3.1 New Report Flow
 ```
 1. Rep sends Thai message in LINE
-2. Vercel webhook receives POST /api/webhook
+2. Vercel webhook receives POST /api/webhook (1MB body limit enforced)
 3. LINE signature validated (HMAC-SHA256)
-4. Rep profile fetched from LINE API (display name)
-5. Check for command keywords (summary, help, update) → handle if matched
-6. Gemini AI parses message → structured JSON with activities[]
-7. Hard validation: reject if contact_channel missing (non-service activities)
-8. Soft validation: nudge for other missing mandatory fields
-9. Write to 2 sheets: Combined → Live Data
-10. Smart match: check for existing active deals with same customer+product
-11. Reply to LINE with confirmation + nudge + match suggestions
+4. Event deduplication check (skip if already processed — prevents LINE retry duplication)
+5. Message length guard (reject if > 2,000 characters)
+6. Rep profile fetched from LINE API (display name)
+7. Check for command keywords (summary, help, update) → handle if matched
+8. Gemini AI parses message → structured JSON with activities[]
+9. AI output validated: activity_type/sales_stage clamped to known enums, None→""
+10. Hard validation: reject if contact_channel missing (non-service activities)
+11. Soft validation: nudge for other missing mandatory fields
+12. Cell values sanitized (formula injection protection)
+13. Write to 2 sheets: Combined → Live Data (with failure logging)
+14. Smart match: check for existing active deals with same customer+product
+15. Reply to LINE with confirmation + nudge + match suggestions (error-handled)
 ```
 
 ### 3.2 Update Flow
 ```
-1. Rep sends "อัพเดท MSG-XXXXX <changes>"
+1. Rep sends "อัพเดท MSG-XXXXXXXX <changes>"
 2. Regex match extracts batch_id + update text
-3. Existing row data fetched from Combined sheet
-4. Gemini AI parses update text against existing data → changed fields only
-5. Cell updates applied to: Combined → Live Data
+3. Existing row data fetched from Combined sheet + ownership verified
+4. Gemini AI parses update text (with Groq fallback) → changed fields only
+5. Cell updates applied to: Combined → Live Data (Live Data failures logged)
 6. Reply with before→after diff
 ```
 
@@ -114,7 +118,7 @@ All other integrations (LINE, Gemini, Groq) use `urllib.request` directly.
 | R | Follow-up Notes | string | AI-parsed |
 | S | Summary (EN) | string | AI-generated English summary |
 | T | Raw Message | string | Original LINE message |
-| U | Batch ID | `MSG-XXXXX` | MD5 hash of timestamp+rep+message |
+| U | Batch ID | `MSG-XXXXXXXX` | MD5 hash of timestamp+rep+message (8 hex chars) |
 | V | Item # | `1/3`, `2/3` etc. | Multi-activity grouping |
 | W | Source | `live` or `sample` | Bot vs. generated data |
 | X | Manager Notes | string | Manual entry only |
@@ -190,6 +194,15 @@ Update commands use a separate, shorter prompt that:
 - Parses only the changed fields
 - Returns a minimal JSON with only modified fields
 - Maps Thai shortcuts: `เจรจา`→negotiation, `ส่ง QT`→quotation_sent, `ปิดได้`→closed_won
+- Uses the same dual-AI failover: Gemini primary, Groq fallback (via `_parse_update_with_ai()`)
+
+### 6.5 AI Output Validation
+
+After AI parsing, all output is validated before writing to sheets:
+- `activity_type` must be one of 8 valid enums; defaults to `other` if unknown
+- `sales_stage` must be one of 10 valid enums; set to `null` if unknown
+- `None` values from AI are coerced to empty strings (prevents literal `"None"` in cells)
+- All string cell values are sanitized against formula injection (`=`, `+`, `-`, `@` prefixes escaped)
 
 ---
 
@@ -243,6 +256,13 @@ LINE webhook signature validated via HMAC-SHA256:
 HMAC(LINE_CHANNEL_SECRET, request_body) == X-Line-Signature header
 ```
 
+Additional webhook hardening:
+- **1MB body size limit** — requests exceeding `MAX_BODY_SIZE` return 413
+- **Event deduplication** — in-memory LRU cache prevents LINE webhook retries from creating duplicate rows
+- **2,000-char message guard** — overlong messages are rejected before AI parsing
+- **Missing secrets** — returns 503 "service unavailable" (never reveals which secret is missing)
+- **Formula injection** — all cell values sanitized before writing to Google Sheets
+
 ### 9.2 Message Routing
 
 Keywords checked in order (case-insensitive):
@@ -275,7 +295,7 @@ Used for stale deal alerts only. Requires LINE user_id from Rep Registry tab. Fr
 
 **Endpoint:** `GET /api/stale-check`
 
-**Security:** `X-Cron-Secret` header must match `CRON_SECRET` env var.
+**Security:** `X-Cron-Secret` header validated against `CRON_SECRET` env var using constant-time comparison (`hmac.compare_digest`).
 
 **Logic:**
 1. Read all rows from Combined sheet
@@ -339,19 +359,46 @@ Used for stale deal alerts only. Requires LINE user_id from Rep Registry tab. Fr
 
 | Scenario | Behavior |
 |----------|----------|
-| Gemini API fails | Falls back to Groq Llama 3.3 70B |
-| Groq also fails | Generic error reply to LINE |
+| Gemini API fails | Falls back to Groq Llama 3.3 70B (for both reports and updates) |
+| Groq also fails | Generic error reply to LINE (with proper error handling and logging) |
+| Gemini response malformed | Safe extraction via `_extract_gemini_text()` with clear error messages |
+| AI returns invalid enums | Activity type/sales stage clamped to valid values before writing |
+| AI returns `null` fields | Coerced to empty string via `_safe()` (prevents "None" in cells) |
 | Sheets write fails | Report still confirmed to user with warning badge |
+| Live Data write fails | Logged with details (no longer silently swallowed) |
+| LINE reply fails | Caught and logged (no longer crashes the handler) |
 | LINE profile fetch fails | Uses raw `user_id` as rep name |
-| Stale check unauthorized | Returns 401 JSON |
-| Stale check error | Returns 500 with truncated error message |
+| Stale check unauthorized | Returns 401 JSON (constant-time comparison) |
+| Stale check error | Returns 500 with generic message (details logged server-side only) |
+| Missing secrets | Returns 503 "service unavailable" (never reveals which secret) |
 | Non-sales message | Silently ignored (no reply) |
 | Empty webhook body | Returns 200 OK (LINE verify request) |
+| Oversized webhook body | Returns 413 (1MB limit) |
+| Oversized message text | Rejected with Thai error (2,000-char limit) |
+| Duplicate LINE event | Skipped via in-memory dedup cache (60s TTL) |
 | Missing contact channel | Report rejected before saving, rep asked to resend |
+| Formula injection attempt | Cell values prefixed with `'` to neutralize formulas |
 
 ---
 
-## 15. File Structure
+## 15. Security Measures
+
+| Layer | Measure | Implementation |
+|-------|---------|----------------|
+| **Webhook Auth** | HMAC-SHA256 signature validation | `validate_signature()` with `hmac.compare_digest()` |
+| **Cron Auth** | Constant-time secret comparison | `hmac.compare_digest(secret, CRON_SECRET)` in stale_check.py |
+| **Input Limits** | 1MB body size, 2000-char message | `MAX_BODY_SIZE`, `MAX_MESSAGE_LENGTH` checked before processing |
+| **Idempotency** | In-memory event dedup cache (60s TTL) | `_is_duplicate_event()` prevents LINE retry duplication |
+| **Formula Injection** | Cell value sanitization | `_sanitize_cell()` escapes `=`, `+`, `-`, `@` prefixes |
+| **AI Output** | Enum validation + null coercion | `_validate_ai_output()` clamps to valid values; `_safe()` prevents "None" |
+| **Error Sanitization** | Generic error responses | HTTP responses never contain `str(e)`, stack traces, or internal details |
+| **PII Protection** | Redacted logging, no rep names in responses | Message content not logged; stale check response omits rep names |
+| **Google Scope** | Minimal Drive permissions | `drive.file` scope instead of full `drive` access |
+| **Safe Parsing** | Defensive Gemini response extraction | `_extract_gemini_text()` handles empty candidates, safety blocks |
+
+---
+
+## 16. File Structure
 
 ```
 ate_sales_report_system_planning/
@@ -364,8 +411,8 @@ ate_sales_report_system_planning/
 │   ├── vercel.json                  # Builds + routes config
 │   ├── requirements.txt             # gspread + google-auth
 │   ├── api/
-│   │   ├── webhook.py               # Main serverless function (1,270+ lines)
-│   │   ├── stale_check.py           # Stale deal endpoint (264 lines)
+│   │   ├── webhook.py               # Main serverless function (1,400+ lines)
+│   │   ├── stale_check.py           # Stale deal endpoint (270 lines)
 │   │   └── megger_segments.py       # 431-product → 7-segment lookup
 │   ├── populate_sample_data.py      # Sample data + sheet formatting
 │   ├── generate_rich_menu_image.py  # Rich menu PNG generator

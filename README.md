@@ -46,7 +46,7 @@ See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the full 15-section architecture do
 - สินค้า: Megger MTO330
 - มูลค่า: ฿150,000
 - สถานะ: เจรจา
-📋 Batch ID: MSG-A1B2C
+📋 Batch ID: MSG-A1B2C3D4
 ```
 
 The data is simultaneously written to 4 Google Sheets tabs and the dashboard updates in real time.
@@ -65,7 +65,7 @@ The data is simultaneously written to 4 Google Sheets tabs and the dashboard upd
     "deal_value_thb": 150000,
     "activity_type": "visit",
     "sales_stage": "negotiation",
-    "batch_id": "MSG-A1B2C"
+    "batch_id": "MSG-A1B2C3D4"
   }]
 }
 ```
@@ -75,7 +75,7 @@ The data is simultaneously written to 4 Google Sheets tabs and the dashboard upd
 
 | Command | What It Does |
 |---------|-------------|
-| `อัพเดท MSG-A1B2C สถานะปิดได้ วางมัดจำ 50%` | Update existing deal — AI parses only changed fields |
+| `อัพเดท MSG-A1B2C3D4 สถานะปิดได้ วางมัดจำ 50%` | Update existing deal — AI parses only changed fields, with Groq fallback |
 | `สรุป` | AI-generated Thai pipeline summary with stats |
 | Weekly push (automatic) | Stale deal reminders for deals with no update in 7+ days |
 
@@ -92,10 +92,13 @@ The data is simultaneously written to 4 Google Sheets tabs and the dashboard upd
 | 📊 | **Product Segment Auto-Match** | 431 Megger products → 7 segments (CI, GET, LVI, MRM, PDIX, PP, PT) |
 | 📊 | **Multi-Sheet Write** | Every report → Combined + Live Data |
 | 📊 | **Smart Match** | Detects existing active deals with same customer+product, suggests batch IDs |
-| 📊 | **Update System** | Modify existing deals via `อัพเดท MSG-XXXXX` — AI parses only changes |
+| 📊 | **Update System** | Modify existing deals via `อัพเดท MSG-XXXXXXXX` — AI parses only changes, with Groq fallback |
 | 💬 | **Hard Validation** | Reports without phone/email are rejected before saving |
 | 💬 | **3-Tier Nudge** | Polite Thai hints for missing fields (0=none, 1-2=hint, 3+=hint+example) |
 | 💬 | **Rich Menu** | 4-button LINE interface (How to Report, How to Update, Open Dashboard, Open Sheets) |
+| 🔒 | **Formula Injection Protection** | All cell values sanitized before writing to prevent spreadsheet formula attacks |
+| 🔒 | **Webhook Hardening** | 1MB body size limit, 2000-char message guard, event deduplication, timing-safe auth |
+| 🔒 | **AI Output Validation** | Parsed activity_type and sales_stage validated against known enums before writing |
 | ⚙️ | **Stale Deal Cron** | GitHub Actions weekly push — reps notified of 7+ day old deals |
 | ⚙️ | **Zero SDK Design** | Only 2 pip dependencies (gspread, google-auth); all APIs via urllib |
 
@@ -136,9 +139,10 @@ The data is simultaneously written to 4 Google Sheets tabs and the dashboard upd
 | **Product segment** | 431-product lookup dict in `megger_segments.py` — code-only, not AI | Deterministic matching is 100% reliable; no added AI latency or token cost |
 | **HTTP client** | `urllib.request` for LINE, Gemini, Groq — no SDKs | Eliminates version conflicts on Vercel's Python runtime; only 2 pip deps total |
 | **Database** | Google Sheets via gspread | Free, familiar to sales managers, sufficient for 6-8 reps; would migrate to PostgreSQL at scale |
-| **AI failover** | Gemini primary, Groq secondary | Gemini has superior Thai parsing; Groq provides sub-second fallback if Gemini is down |
+| **AI failover** | Gemini primary, Groq secondary (for both reports and updates) | Gemini has superior Thai parsing; Groq provides sub-second fallback if Gemini is down |
 | **Lazy imports** | gspread/google-auth imported inside functions | Vercel's Python runtime fails on module-level imports of these libraries |
-| **Multi-tab writes** | Every report → 2 sheets | Combined (dashboard) + Live Data (permanent audit) |
+| **Multi-tab writes** | Every report → 2 sheets | Combined (dashboard) + Live Data (permanent audit), with failure logging |
+| **Security by default** | Formula injection protection, timing-safe auth, sanitized errors | Defense in depth — no user input reaches sheets or HTTP responses unsanitized |
 
 ---
 
@@ -155,8 +159,8 @@ ate_sales_report_system_planning/
 │       └── stale-check.yml          # Weekly cron trigger
 ├── demo/
 │   ├── api/
-│   │   ├── webhook.py               # Main serverless function (1,270+ lines)
-│   │   ├── stale_check.py           # Stale deal endpoint (264 lines)
+│   │   ├── webhook.py               # Main serverless function (1,400+ lines)
+│   │   ├── stale_check.py           # Stale deal endpoint (270 lines)
 │   │   └── megger_segments.py       # 431-product → 7-segment lookup
 │   ├── populate_sample_data.py      # Sample data + sheet formatting
 │   ├── generate_rich_menu_image.py  # Rich menu PNG generator
@@ -259,6 +263,7 @@ See [ARCHITECTURE.md § Data Model](ARCHITECTURE.md#4-data-model) for full schem
 
 ## Roadmap
 
+- [x] Security & reliability hardening (formula injection, timing-safe auth, event dedup, AI validation)
 - Photo/receipt OCR via Gemini Vision
 - Monthly auto-summary cron push to management
 - Competitor tracking from lost-deal close reasons

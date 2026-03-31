@@ -29,10 +29,12 @@
 
 ### Write Order
 
-`LINE message` -> `Vercel webhook.py` -> `Gemini AI parse` -> `gspread append_rows()`:
-1. Write to **Live Data** tab first (permanent record)
-2. Write to **Sheet1** second (demo/dashboard, Looker Studio reads this)
-3. Send **LINE reply** with confirmation + nudge
+`LINE message` -> `Vercel webhook.py` -> `Gemini AI parse` -> `validate & sanitize` -> `gspread append_rows()`:
+1. AI output validated: activity_type/sales_stage clamped to valid enums, `None` → `""`
+2. All cell values sanitized against formula injection (`=`, `+`, `-`, `@` prefixes escaped)
+3. Write to **Combined** tab (dashboard source, Looker Studio reads this)
+4. Write to **Live Data** tab (permanent record, failures logged but non-blocking)
+5. Send **LINE reply** with confirmation + nudge (error-handled)
 
 ---
 
@@ -75,7 +77,7 @@ All data tabs (Sheet1, Live Data, Backup_*) share the same column layout.
 | R | Follow-up Notes | String | AI-extracted notes or action items | `รอ PO สัปดาห์หน้า` |
 | S | Summary (EN) | String | Brief English summary, under 100 chars | `Visited PTT, quoted Megger MTO330 at 285K` |
 | T | Raw Message | String | Original LINE message text (audit trail) | `ไปเยี่ยม PTT วันนี้...` |
-| U | Batch ID | String | `MSG-XXXXX` hash grouping multi-activity messages | `MSG-A3F2B` |
+| U | Batch ID | String | `MSG-XXXXXXXX` hash grouping multi-activity messages (8 hex chars) | `MSG-A3F2B1C4` |
 | V | Item # | String | Position label for multi-activity messages | `1/3` |
 | W | Source | String | Origin of the row | `live` or `sample` |
 | X | Manager Notes | String | Blank — for management manual input only | |
@@ -155,7 +157,7 @@ Rows missing mandatory fields (Customer, Contact Channel, Product Name, Deal Val
 
 ## Dual-Write Strategy
 
-The webhook writes every parsed message to two tabs: **Live Data** first (permanent), then **Sheet1** (demo/dashboard). If the Live Data tab does not exist, the webhook creates it automatically with headers and formatting.
+The webhook writes every parsed message to two tabs: **Combined** first (dashboard), then **Live Data** (permanent). If either tab does not exist, the webhook creates it automatically with headers and formatting. Live Data write failures are logged but do not block the request — the Combined write (dashboard source) takes priority.
 
 ---
 

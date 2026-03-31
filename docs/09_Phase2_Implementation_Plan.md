@@ -177,7 +177,7 @@ LINE message from rep
 
 **Explicit update:**
 ```
-อัพเดท MSG-A1B2C สถานะเจรจา ราคาลดเหลือ 2.8 ล้าน
+อัพเดท MSG-A1B2C3D4 สถานะเจรจา ราคาลดเหลือ 2.8 ล้าน
 ```
 → Bot finds Batch ID, updates row in all sheets, replies with before→after summary.
 
@@ -187,9 +187,9 @@ PTT MTO330 ลดราคาเหลือ 2.8 ล้าน
 ```
 → Bot detects existing PTT/MTO330 deal, shows match:
 > "พบดีลที่ตรงกัน:
-> 📋 MSG-A1B2C | PTT / MTO330 / ฿3,050,000 / quotation_sent
+> 📋 MSG-A1B2C3D4 | PTT / MTO330 / ฿3,050,000 / quotation_sent
 >
-> ตอบ: `อัพเดท MSG-A1B2C` หรือพิมพ์ต่อเพื่อสร้างรายการใหม่"
+> ตอบ: `อัพเดท MSG-A1B2C3D4` หรือพิมพ์ต่อเพื่อสร้างรายการใหม่"
 
 ### 5.2 Stale Deal Push Notification
 
@@ -201,7 +201,7 @@ PTT MTO330 ลดราคาเหลือ 2.8 ล้าน
 > 1. PTT / MTO330 / ฿3.05M (7 วัน)
 > 2. IRPC / DLRO200 / ฿1.45M (12 วัน)
 >
-> พิมพ์อัพเดทได้เลยครับ หรือถ้าดีลจบแล้ว พิมพ์: อัพเดท MSG-XXXXX job_expired"
+> พิมพ์อัพเดทได้เลยครับ หรือถ้าดีลจบแล้ว พิมพ์: อัพเดท MSG-XXXXXXXX job_expired"
 
 ### ~~5.3 Major Opportunity Sheet (Megger)~~ — Removed
 
@@ -211,7 +211,7 @@ PTT MTO330 ลดราคาเหลือ 2.8 ล้าน
 
 Help message updated to include:
 - New activity types (`sent_to_service`)
-- Update command (`อัพเดท MSG-XXXXX`)
+- Update command (`อัพเดท MSG-XXXXXXXX`)
 - New stages (`plan_to_visit`, `bidding`, `job_expired`)
 - Summary command (`สรุป`)
 
@@ -285,7 +285,7 @@ Shows:
 | 2 | Update `populate_sample_data.py` for new schema | 1 hr | Task 1 | Done |
 | 3 | ~~Individual sheets + combined + protection~~ | — | — | Removed |
 | 4 | ~~Major Opportunity auto-copy (Megger)~~ | — | — | Removed |
-| 5 | Update entry (`อัพเดท MSG-XXXXX`) | 2 hrs | Task 1 | Done |
+| 5 | Update entry (`อัพเดท MSG-XXXXXXXX`) | 2 hrs | Task 1 | Done |
 | 6 | Smart match detection on plain messages | 1 hr | Task 5 | Done |
 | 7 | Stale deal push (`/api/stale-check`) | 2 hrs | Task 3 | Done |
 | 8 | Update Rich Menu help text | 15 min | Task 5 | Done |
