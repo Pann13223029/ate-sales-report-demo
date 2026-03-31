@@ -30,7 +30,7 @@ LINE Message → Vercel Serverless → Gemini AI Parse → Google Sheets → LIN
 | Database | Google Sheets (via gspread) | Multi-tab data storage |
 | Dashboard | Looker Studio | KPIs, pipeline chart, segment mix |
 | Cron | GitHub Actions | Weekly stale deal notifications |
-| Rich Menu | LINE Rich Menu API | 5-button navigation |
+| Rich Menu | LINE Rich Menu API | 4-button navigation |
 
 **Dependencies** (`requirements.txt`):
 - `gspread==6.1.4` — Google Sheets client
@@ -252,16 +252,18 @@ Keywords checked in order (case-insensitive):
 4. **Update command:** regex `^(อัพเดท|อัพเดต|update|แก้ไข)\s+(MSG-[A-Za-z0-9]+)\s*(.*)`
 5. **Sales report:** everything else → AI parsing pipeline
 
-### 9.3 Rich Menu (3 buttons)
+### 9.3 Rich Menu (4 buttons)
 
-Single-row layout on 2500x843 canvas:
+2x2 layout on 2500x843 canvas:
 ```
-┌──────────┬──────────┬──────────┐
-│ วิธีรายงาน │ วิธีอัพเดท │ เปิด Sheets │  (3 × 833px)
-└──────────┴──────────┴──────────┘
+┌─────────────────┬─────────────────┐
+│ วิธีรายงาน       │ วิธีอัพเดท       │
+├─────────────────┼─────────────────┤
+│ เปิด Dashboard │ เปิด Sheets     │
+└─────────────────┴─────────────────┘
 ```
-- Left 2: message actions (send keyword text)
-- Right: URI action (open Google Sheets)
+- Top row: message actions (send keyword text)
+- Bottom row: URI actions (open Looker Studio and Google Sheets)
 
 ### 9.4 Push Notifications
 
@@ -303,7 +305,6 @@ Used for stale deal alerts only. Requires LINE user_id from Rep Registry tab. Fr
 
 **GitHub Actions Secrets** (for stale-check workflow):
 - `CRON_SECRET` — must match Vercel env var
-- `STALE_CHECK_URL` — full URL: `https://ate-sales-demo.vercel.app/api/stale-check`
 
 ---
 

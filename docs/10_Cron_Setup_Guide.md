@@ -42,7 +42,7 @@ jobs:
         run: |
           curl -s -f -X GET \
             -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
-            "${{ secrets.STALE_CHECK_URL }}" \
+            "https://ate-sales-demo.vercel.app/api/stale-check" \
             | jq .
 ```
 
@@ -53,7 +53,6 @@ Go to your repo → Settings → Secrets and variables → Actions → New repos
 | Secret | Value |
 |--------|-------|
 | `CRON_SECRET` | Same value as your Vercel `CRON_SECRET` env var |
-| `STALE_CHECK_URL` | `https://your-app.vercel.app/api/stale-check` |
 
 ### Step 3: Add CRON_SECRET to Vercel
 
@@ -115,7 +114,7 @@ crontab -e
 **Headers:**
 | Header | Required | Description |
 |--------|----------|-------------|
-| `X-Cron-Secret` | Yes (if CRON_SECRET env var is set) | Must match the `CRON_SECRET` environment variable |
+| `X-Cron-Secret` | Yes | Must match the `CRON_SECRET` environment variable |
 
 **Success Response (200):**
 ```json
@@ -141,6 +140,13 @@ crontab -e
 ```json
 {
   "error": "unauthorized"
+}
+```
+
+**Misconfigured (500):**
+```json
+{
+  "error": "missing CRON_SECRET"
 }
 ```
 

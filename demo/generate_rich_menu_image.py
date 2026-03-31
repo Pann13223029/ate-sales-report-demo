@@ -1,6 +1,5 @@
 """
-Generate LINE Rich Menu image (2500x843) for ATE Sales Report Bot.
-3 buttons in a single row.
+Generate a 4-button LINE Rich Menu image (2500x843) for ATE Sales Report Bot.
 
 Usage:
   python3 generate_rich_menu_image.py
@@ -21,15 +20,18 @@ TEXT_COLOR = (255, 255, 255)
 ICON_COLOR = (130, 180, 255)       # Light blue for icons
 ICON_ACCENT = (100, 220, 160)      # Green accent
 
-# Layout: single row, 3 equal cells
-NUM_COLS = 3
-CELL_W = WIDTH // NUM_COLS          # 833
+# Layout: main menu uses a 2x2 grid
+NUM_COLS = 2
+NUM_ROWS = 2
+CELL_W = WIDTH // NUM_COLS
+CELL_H = HEIGHT // NUM_ROWS
 
 # Button definitions
 BUTTONS = [
-    {"thai": "วิธีรายงาน",    "eng": "How to Report",   "col": 0},
-    {"thai": "วิธีอัพเดท",    "eng": "How to Update",   "col": 1},
-    {"thai": "เปิด Sheets",    "eng": "Google Sheets",  "col": 2},
+    {"thai": "วิธีรายงาน", "eng": "How to Report", "col": 0, "row": 0},
+    {"thai": "วิธีอัพเดท", "eng": "How to Update", "col": 1, "row": 0},
+    {"thai": "เปิด Dashboard", "eng": "Dashboard", "col": 0, "row": 1},
+    {"thai": "เปิด Sheets", "eng": "Google Sheets", "col": 1, "row": 1},
 ]
 
 # Find Thai font
@@ -171,48 +173,48 @@ def draw_grid_icon(draw, cx, cy, size=70):
         draw.line([(x0, ry), (x1, ry)], fill=ICON_COLOR, width=2)
 
 
-ICON_DRAWERS = [draw_document_icon, draw_refresh_icon, draw_grid_icon]
+ICON_DRAWERS = [draw_document_icon, draw_refresh_icon, draw_line_chart_icon, draw_grid_icon]
 
 
 # ---------------------------------------------------------------------------
 # Build image
 # ---------------------------------------------------------------------------
 
-img = Image.new("RGB", (WIDTH, HEIGHT), BG_COLOR)
-draw = ImageDraw.Draw(img)
+def draw_menu(buttons, drawers, output_name):
+    img = Image.new("RGB", (WIDTH, HEIGHT), BG_COLOR)
+    draw = ImageDraw.Draw(img)
 
-for idx, btn in enumerate(BUTTONS):
-    x0 = btn["col"] * CELL_W
-    y0 = 0
-    x1 = x0 + CELL_W
-    y1 = HEIGHT
+    for idx, btn in enumerate(buttons):
+        x0 = btn["col"] * CELL_W
+        y0 = btn["row"] * CELL_H
+        x1 = WIDTH if btn["col"] == NUM_COLS - 1 else x0 + CELL_W
+        y1 = HEIGHT if btn["row"] == NUM_ROWS - 1 else y0 + CELL_H
 
-    # Cell background
-    inner_margin = 6
-    draw.rectangle([x0 + inner_margin, y0 + inner_margin, x1 - inner_margin, y1 - inner_margin],
-                   fill=CELL_COLOR)
+        inner_margin = 6
+        draw.rectangle(
+            [x0 + inner_margin, y0 + inner_margin, x1 - inner_margin, y1 - inner_margin],
+            fill=CELL_COLOR,
+        )
+        draw.rectangle([x0, y0, x1, y1], outline=BORDER_COLOR, width=3)
 
-    # Border lines
-    draw.line([(x1, y0), (x1, y1)], fill=BORDER_COLOR, width=3)
+        cx = x0 + (x1 - x0) // 2
+        cy = y0 + (y1 - y0) // 2
 
-    cx = x0 + CELL_W // 2
-    cy = HEIGHT // 2
+        icon_cy = cy - 48
+        drawers[idx](draw, cx, icon_cy, size=66)
 
-    # Draw icon (centered above text)
-    icon_cy = cy - 55
-    ICON_DRAWERS[idx](draw, cx, icon_cy, size=70)
+        thai_bbox = draw.textbbox((0, 0), btn["thai"], font=font_main)
+        tw = thai_bbox[2] - thai_bbox[0]
+        draw.text((cx - tw // 2, cy + 2), btn["thai"], fill=TEXT_COLOR, font=font_main)
 
-    # Draw Thai label
-    thai_bbox = draw.textbbox((0, 0), btn["thai"], font=font_main)
-    tw = thai_bbox[2] - thai_bbox[0]
-    draw.text((cx - tw // 2, cy + 15), btn["thai"], fill=TEXT_COLOR, font=font_main)
+        eng_bbox = draw.textbbox((0, 0), btn["eng"], font=font_sub)
+        ew = eng_bbox[2] - eng_bbox[0]
+        draw.text((cx - ew // 2, cy + 58), btn["eng"], fill=(170, 190, 215), font=font_sub)
 
-    # Draw English subtitle
-    eng_bbox = draw.textbbox((0, 0), btn["eng"], font=font_sub)
-    ew = eng_bbox[2] - eng_bbox[0]
-    draw.text((cx - ew // 2, cy + 75), btn["eng"], fill=(170, 190, 215), font=font_sub)
+    output_path = os.path.join(os.path.dirname(__file__), output_name)
+    img.save(output_path, "PNG")
+    print(f"Rich menu image saved: {output_path}")
+    print(f"Size: {WIDTH}x{HEIGHT}")
 
-output_path = os.path.join(os.path.dirname(__file__), "rich_menu.png")
-img.save(output_path, "PNG")
-print(f"Rich menu image saved: {output_path}")
-print(f"Size: {WIDTH}x{HEIGHT}")
+
+draw_menu(BUTTONS, ICON_DRAWERS, "rich_menu.png")

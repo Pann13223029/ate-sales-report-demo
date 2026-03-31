@@ -95,7 +95,7 @@ The data is simultaneously written to 4 Google Sheets tabs and the dashboard upd
 | 📊 | **Update System** | Modify existing deals via `อัพเดท MSG-XXXXX` — AI parses only changes |
 | 💬 | **Hard Validation** | Reports without phone/email are rejected before saving |
 | 💬 | **3-Tier Nudge** | Polite Thai hints for missing fields (0=none, 1-2=hint, 3+=hint+example) |
-| 💬 | **Rich Menu** | 3-button LINE interface (How to Report, How to Update, Open Sheets) |
+| 💬 | **Rich Menu** | 4-button LINE interface (How to Report, How to Update, Open Dashboard, Open Sheets) |
 | ⚙️ | **Stale Deal Cron** | GitHub Actions weekly push — reps notified of 7+ day old deals |
 | ⚙️ | **Zero SDK Design** | Only 2 pip dependencies (gspread, google-auth); all APIs via urllib |
 
@@ -121,9 +121,10 @@ The data is simultaneously written to 4 Google Sheets tabs and the dashboard upd
 
 ![LINE Rich Menu](demo/rich_menu.png)
 
-3-button persistent menu in LINE with bilingual Thai/English labels:
+4-button persistent menu in LINE with bilingual Thai/English labels:
 - **วิธีรายงาน** (How to Report) — shows reporting guide with examples
 - **วิธีอัพเดท** (How to Update) — shows update command syntax
+- **เปิด Dashboard** (Dashboard) — opens the Looker Studio report
 - **เปิด Sheets** (Google Sheets) — opens the spreadsheet directly
 
 ---

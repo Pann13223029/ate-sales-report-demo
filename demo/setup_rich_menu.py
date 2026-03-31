@@ -7,7 +7,8 @@ Run once after deployment:
 Requires:
   - LINE_CHANNEL_ACCESS_TOKEN in .env or environment
   - rich_menu.png in same directory
-  - Google Sheets URL
+  - Dashboard URL
+  - Google Sheets URL or GOOGLE_SHEETS_ID
 """
 
 import os
@@ -18,24 +19,52 @@ import urllib.request
 # Config
 # ---------------------------------------------------------------------------
 
-TOKEN = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN", "")
 
-# URLs — update these with your actual URLs
-SHEETS_URL = os.environ.get("SHEETS_URL", "https://docs.google.com/spreadsheets/d/1N8urzMgcVBjJ3iv5ACPtMP-pG70rtlaHQ6v3iTJ48wY/edit")
+def load_env_file():
+    """Load a dotenv-style file into os.environ without overwriting existing vars."""
+    env_path = os.environ.get("ENV_FILE")
+    if not env_path:
+        env_path = os.path.join(os.path.dirname(__file__), ".env")
+
+    if not os.path.exists(env_path):
+        return
+
+    with open(env_path) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+            os.environ.setdefault(key, value)
+
+
+load_env_file()
+
+TOKEN = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN", "")
+DASHBOARD_URL = os.environ.get(
+    "DASHBOARD_URL",
+    "https://lookerstudio.google.com/reporting/9a4b326f-4f51-4f85-be2f-2bf8e958a9ec",
+)
+GOOGLE_SHEETS_ID = os.environ.get("GOOGLE_SHEETS_ID", "")
+SHEETS_URL = os.environ.get("SHEETS_URL", "")
 
 if not TOKEN:
-    # Try loading from .env file
-    env_path = os.path.join(os.path.dirname(__file__), ".env")
-    if os.path.exists(env_path):
-        with open(env_path) as f:
-            for line in f:
-                line = line.strip()
-                if line.startswith("LINE_CHANNEL_ACCESS_TOKEN="):
-                    TOKEN = line.split("=", 1)[1].strip().strip('"').strip("'")
-    if not TOKEN:
-        print("ERROR: LINE_CHANNEL_ACCESS_TOKEN not found.")
-        print("Set it as environment variable or in .env file.")
-        exit(1)
+    print("ERROR: LINE_CHANNEL_ACCESS_TOKEN not found.")
+    print("Set it as environment variable, ENV_FILE, or in .env file.")
+    exit(1)
+
+if not SHEETS_URL and GOOGLE_SHEETS_ID:
+    SHEETS_URL = f"https://docs.google.com/spreadsheets/d/{GOOGLE_SHEETS_ID}/edit"
+
+if not SHEETS_URL:
+    print("ERROR: SHEETS_URL or GOOGLE_SHEETS_ID is required.")
+    exit(1)
+
+if not DASHBOARD_URL:
+    print("ERROR: DASHBOARD_URL is required.")
+    exit(1)
 
 
 def api_call(method, path, data=None, content_type="application/json"):
@@ -92,10 +121,10 @@ def delete_existing_menus():
 
 
 def create_rich_menu():
-    """Create the rich menu with 3 buttons in a single row."""
+    """Create the rich menu with 4 buttons in a 2x2 layout."""
 
-    # 2500x843 image, 3 equal columns
-    cell_w = 2500 // 3     # 833
+    cell_w = 2500 // 2
+    cell_h = 843 // 2
 
     menu_data = {
         "size": {"width": 2500, "height": 843},
@@ -103,19 +132,20 @@ def create_rich_menu():
         "name": "ATE Sales Bot Menu",
         "chatBarText": "เมนู ATE Sales",
         "areas": [
-            # Left: วิธีรายงาน
             {
-                "bounds": {"x": 0, "y": 0, "width": cell_w, "height": 843},
+                "bounds": {"x": 0, "y": 0, "width": cell_w, "height": cell_h},
                 "action": {"type": "message", "text": "วิธีรายงาน"}
             },
-            # Center: วิธีอัพเดท
             {
-                "bounds": {"x": cell_w, "y": 0, "width": cell_w, "height": 843},
+                "bounds": {"x": cell_w, "y": 0, "width": cell_w, "height": cell_h},
                 "action": {"type": "message", "text": "วิธีอัพเดท"}
             },
-            # Right: เปิด Sheets → URL
             {
-                "bounds": {"x": cell_w * 2, "y": 0, "width": cell_w, "height": 843},
+                "bounds": {"x": 0, "y": cell_h, "width": cell_w, "height": 843 - cell_h},
+                "action": {"type": "uri", "uri": DASHBOARD_URL}
+            },
+            {
+                "bounds": {"x": cell_w, "y": cell_h, "width": cell_w, "height": 843 - cell_h},
                 "action": {"type": "uri", "uri": SHEETS_URL}
             },
         ]

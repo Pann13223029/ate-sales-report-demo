@@ -14,5 +14,5 @@ jobs:
         run: |
           curl -s -f -X GET \
             -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
-            "${{ secrets.STALE_CHECK_URL }}" \
+            "https://ate-sales-demo.vercel.app/api/stale-check" \
             | jq .
