@@ -33,6 +33,9 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 GOOGLE_SHEETS_ID = os.environ.get("GOOGLE_SHEETS_ID", "")
 GOOGLE_SERVICE_ACCOUNT_JSON = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON", "")
 
+# User allowlist: comma-separated LINE user IDs. Empty = allow all (for staging).
+ALLOWED_USER_IDS = set(filter(None, os.environ.get("ALLOWED_USER_IDS", "").split(",")))
+
 # Bangkok timezone (UTC+7)
 BKK_TZ = timezone(timedelta(hours=7))
 
@@ -153,7 +156,7 @@ Return ONLY valid JSON matching this schema:
     {
       "customer_name": "string or null",
       "contact_person": "string or null",
-      "contact_channel": "string — MANDATORY: phone number or email address of the contact person. Must be a real phone number (e.g. 081-234-5678) or email (e.g. weera@ptt.co.th). Never use 'เข้าพบ' or visit/call categories. null only if truly not mentioned.",
+      "contact_channel": "string — MANDATORY: phone number or email address of the contact person. Must be a real phone number (e.g. 0XX-000-0000) or email (e.g. contact@example.com). Never use 'เข้าพบ' or visit/call categories. null only if truly not mentioned.",
       "product_name": "string or null — the product model/name mentioned (e.g. MTO330, 1587 FC, CRC 2-26)",
       "quantity": number or null,
       "deal_value_thb": number or null,
@@ -184,8 +187,8 @@ FEW_SHOT_EXAMPLES = [
         "output": '{"is_sales_report":true,"activities":[{"customer_name":"EGAT","contact_person":null,"contact_channel":null,"product_name":"1770","quantity":null,"deal_value_thb":450000,"activity_type":"closed_won","sales_stage":"closed_won","payment_status":"deposit","planned_visit_date":null,"bidding_date":null,"accompanying_rep":null,"is_training":null,"close_reason":"ปิดดีลได้ตามราคาเสนอ ลูกค้าวางมัดจำ 50%","follow_up_notes":"Customer paid 50% deposit (225,000 THB); remaining 50% pending","summary_en":"Closed 1770 deal with EGAT, 450K THB, 50% deposit"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- ปิดการขายสำเร็จ: EGAT\\n- สินค้า: 1770\\n- มูลค่า: ฿450,000\\n- วางมัดจำ: 50%\\n\\nยินดีด้วยครับ! 🎉"}'
     },
     {
-        "input": "ลูกค้า SCG โทรมาเบอร์ 081-234-5678 สนใจ CRC Contact Cleaner 20 กระป๋อง",
-        "output": '{"is_sales_report":true,"activities":[{"customer_name":"SCG","contact_person":null,"contact_channel":"081-234-5678","product_name":"CRC Contact Cleaner","quantity":20,"deal_value_thb":null,"activity_type":"call","sales_stage":"lead","payment_status":null,"planned_visit_date":null,"bidding_date":null,"accompanying_rep":null,"is_training":null,"close_reason":null,"follow_up_notes":"Customer called expressing interest in 20 cans","summary_en":"SCG called, interested in CRC Contact Cleaner x20"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- ลูกค้าโทรเข้ามา: SCG\\n- สินค้า: CRC Contact Cleaner\\n- จำนวน: 20 กระป๋อง\\n- สถานะ: ลูกค้าสนใจ (Lead)"}'
+        "input": "ลูกค้า SCG โทรมาเบอร์ 0XX-000-0000 สนใจ CRC Contact Cleaner 20 กระป๋อง",
+        "output": '{"is_sales_report":true,"activities":[{"customer_name":"SCG","contact_person":null,"contact_channel":"0XX-000-0000","product_name":"CRC Contact Cleaner","quantity":20,"deal_value_thb":null,"activity_type":"call","sales_stage":"lead","payment_status":null,"planned_visit_date":null,"bidding_date":null,"accompanying_rep":null,"is_training":null,"close_reason":null,"follow_up_notes":"Customer called expressing interest in 20 cans","summary_en":"SCG called, interested in CRC Contact Cleaner x20"}],"confirmation_th":"รับทราบครับ บันทึกแล้ว:\\n- ลูกค้าโทรเข้ามา: SCG\\n- สินค้า: CRC Contact Cleaner\\n- จำนวน: 20 กระป๋อง\\n- สถานะ: ลูกค้าสนใจ (Lead)"}'
     },
     {
         "input": "ใครจะไปกินข้าวเที่ยงมั่ง",
@@ -341,7 +344,7 @@ MANDATORY_FIELDS = {
 # Fields exempt from mandatory check (service entries don't need sales_stage/deal_value)
 SERVICE_ACTIVITY_TYPES = {"sent_to_service"}
 
-EXAMPLE_MESSAGE = "ตัวอย่าง: ไปเยี่ยม PTT คุณวีระ 081-234-5678 เสนอ Megger MTO330 ราคา 150,000 สถานะเจรจา"
+EXAMPLE_MESSAGE = "ตัวอย่าง: ไปเยี่ยม PTT คุณวีระ 0XX-000-0000 เสนอ Megger MTO330 ราคา 150,000 สถานะเจรจา"
 
 
 def build_nudge_confirmation(parsed: dict, ai_confirmation: str) -> str:
@@ -407,11 +410,11 @@ HELP_RESPONSE = """📝 วิธีรายงานการขาย
 พิมพ์ข้อความรายงานเข้ามาได้เลยครับ ระบบจะบันทึกให้อัตโนมัติ
 
 ตัวอย่างรายงาน:
-• ไปเยี่ยม PTT คุณวีระ 081-234-5678 เสนอ MTO330 ราคา 150,000 สถานะเจรจา
+• ไปเยี่ยม PTT คุณวีระ 0XX-000-0000 เสนอ MTO330 ราคา 150,000 สถานะเจรจา
 • โทรคุย EGAT คุณสุรศักดิ์ surasak@egat.co.th เรื่อง TRAX280 งบ 4,500,000
 • ปิดดีล SCG คุณอภิชาติ 084-567-8901 Sverker900 5 เครื่อง 975,000 วางมัดจำ 50%
 • จะไปเยี่ยม IRPC คุณประยุทธ์ prayuth@irpc.co.th เรื่อง MIT525
-• ส่ง MTO330 ของ PTT คุณวีระ 081-234-5678 เข้าซ่อม warranty
+• ส่ง MTO330 ของ PTT คุณวีระ 0XX-000-0000 เข้าซ่อม warranty
 • ยื่นซองประมูล กฟภ. procurement@pea.co.th MIT525 2.1 ล้าน เปิดซอง 25 มี.ค.
 
 อัพเดทดีลเดิม:
@@ -891,7 +894,7 @@ def register_rep(spreadsheet, user_id, display_name):
     except Exception:
         # New rep — append
         reg.append_row([user_id, display_name, now], value_input_option="USER_ENTERED")
-        print(f"[REGISTRY] Registered new rep: {display_name} ({user_id})")
+        print(f"[REGISTRY] Registered new rep: {user_id[:8]}...")
         sys.stdout.flush()
 
 
@@ -1243,10 +1246,19 @@ class handler(BaseHTTPRequestHandler):
 
     def _process_event(self, event: dict):
         """Process a single LINE webhook event."""
-        # Only handle text messages
+        # Only handle message events
         if event.get("type") != "message":
             return
-        if event.get("message", {}).get("type") != "text":
+
+        # Handle non-text messages (photo, sticker, video, etc.)
+        msg_type = event.get("message", {}).get("type", "")
+        if msg_type != "text":
+            reply_token = event.get("replyToken", "")
+            if reply_token and msg_type in ("image", "video", "audio", "file", "sticker", "location"):
+                reply_to_line(reply_token,
+                    "ขออภัยครับ ตอนนี้ระบบรับได้เฉพาะข้อความตัวอักษร\n"
+                    "กรุณาพิมพ์รายงานเป็นข้อความนะครับ\n\n"
+                    "พิมพ์ 'วิธีรายงาน' เพื่อดูตัวอย่าง")
             return
 
         # Idempotency: skip duplicate events (LINE retries)
@@ -1261,13 +1273,20 @@ class handler(BaseHTTPRequestHandler):
         user_id = event.get("source", {}).get("userId", "unknown")
         group_id = event.get("source", {}).get("groupId")
 
+        # User allowlist check (skip if allowlist is empty — for staging)
+        if ALLOWED_USER_IDS and user_id not in ALLOWED_USER_IDS:
+            reply_to_line(reply_token, "ขออภัยครับ คุณไม่ได้รับอนุญาตให้ใช้ระบบนี้")
+            print(f"[MSG] Rejected unauthorized user {user_id[:8]}...")
+            sys.stdout.flush()
+            return
+
         # Get rep display name (skip if no token — just use user_id)
         try:
             rep_name = get_line_profile(user_id, group_id)
         except Exception:
             rep_name = user_id
 
-        print(f"[MSG] {rep_name}: <message received, {len(message_text)} chars>")
+        print(f"[MSG] user={user_id[:8]}... <message received, {len(message_text)} chars>")
         sys.stdout.flush()
 
         # Message length guard
@@ -1327,7 +1346,7 @@ class handler(BaseHTTPRequestHandler):
                 reject_msg = ("⚠️ กรุณาระบุเบอร์โทรหรืออีเมลของผู้ติดต่อด้วยนะครับ "
                               "ระบบยังไม่ได้บันทึกข้อมูลนี้\n\n"
                               "กรุณาส่งใหม่พร้อมเบอร์โทร/อีเมล เช่น:\n"
-                              "ไปเยี่ยม PTT คุณวีระ 081-234-5678 เสนอ Megger MTO330 ราคา 150,000 สถานะเจรจา")
+                              "ไปเยี่ยม PTT คุณวีระ 0XX-000-0000 เสนอ Megger MTO330 ราคา 150,000 สถานะเจรจา")
                 reply_to_line(reply_token, reject_msg)
                 return
 

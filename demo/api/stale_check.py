@@ -178,7 +178,7 @@ def send_stale_notifications(stale_by_rep, spreadsheet):
     for rep_name, deals in stale_by_rep.items():
         user_id = rep_ids.get(rep_name)
         if not user_id:
-            print(f"[STALE] No user ID for rep '{rep_name}', skipping push")
+            print(f"[STALE] No user ID for rep, skipping push")
             sys.stdout.flush()
             continue
 
@@ -197,10 +197,10 @@ def send_stale_notifications(stale_by_rep, spreadsheet):
         try:
             push_line_message(user_id, msg)
             sent_count += 1
-            print(f"[STALE] Pushed {len(deals)} stale deals to {rep_name}")
+            print(f"[STALE] Pushed {len(deals)} stale deals to user {user_id[:8]}...")
             sys.stdout.flush()
         except Exception as e:
-            print(f"[STALE] Failed to push to {rep_name}: {e}")
+            print(f"[STALE] Failed to push to user {user_id[:8]}...: {type(e).__name__}")
             sys.stdout.flush()
 
     return sent_count
