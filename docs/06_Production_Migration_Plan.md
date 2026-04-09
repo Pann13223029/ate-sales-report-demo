@@ -617,9 +617,9 @@ Non-compliance penalties under PDPA:
 |----------|---------|----------|
 | `ARCHITECTURE.md` | Full 16-section technical architecture | Repo root |
 | `demo/README.md` | Step-by-step deployment guide | `demo/` |
-| `docs/07_Sales_Team_Reporting_Guide.md` | Onboarding guide with expert panel consensus | `docs/` |
-| `docs/08_Roadmap.md` | Feature roadmap and changelog | `docs/` |
-| `docs/12_Production_Migration_Plan.md` | This document | `docs/` |
+| `docs/03_Roadmap.md` | Feature roadmap and changelog | `docs/` |
+| `docs/06_Production_Migration_Plan.md` | This document | `docs/` |
+| `docs/07_PDPA_Compliance_Package.md` | PDPA compliance documentation | `docs/` |
 | Incident Response Runbook | Troubleshooting and recovery procedures | `docs/` (to be created, P2-E) |
 
 ### Knowledge Transfer Checklist

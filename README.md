@@ -256,9 +256,12 @@ See [ARCHITECTURE.md § Data Model](ARCHITECTURE.md#4-data-model) for full schem
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Full system architecture — data model, AI pipeline, validation, error handling |
 | [`demo/README.md`](demo/README.md) | Detailed deployment guide with step-by-step setup |
 | [`docs/01_LINE_Setup_Guide.md`](docs/01_LINE_Setup_Guide.md) | LINE Developer Console setup |
-| [`docs/03_Google_Sheets_Template.md`](docs/03_Google_Sheets_Template.md) | Sheets template and column reference |
-| [`docs/10_Cron_Setup_Guide.md`](docs/10_Cron_Setup_Guide.md) | Stale deal cron configuration |
-| [`docs/08_Roadmap.md`](docs/08_Roadmap.md) | Feature roadmap and decision log |
+| [`docs/02_Google_Sheets_Template.md`](docs/02_Google_Sheets_Template.md) | Sheets template and column reference |
+| [`docs/03_Roadmap.md`](docs/03_Roadmap.md) | Feature roadmap and decision log |
+| [`docs/04_Cron_Setup_Guide.md`](docs/04_Cron_Setup_Guide.md) | Stale deal cron configuration |
+| [`docs/05_Dashboard_Configuration_Guide.md`](docs/05_Dashboard_Configuration_Guide.md) | Looker Studio dashboard setup |
+| [`docs/06_Production_Migration_Plan.md`](docs/06_Production_Migration_Plan.md) | Production deployment plan |
+| [`docs/07_PDPA_Compliance_Package.md`](docs/07_PDPA_Compliance_Package.md) | PDPA compliance documentation |
 
 ---
 
@@ -270,7 +273,7 @@ See [ARCHITECTURE.md § Data Model](ARCHITECTURE.md#4-data-model) for full schem
 - Competitor tracking from lost-deal close reasons
 - Pipeline revenue forecasting
 
-See [`docs/08_Roadmap.md`](docs/08_Roadmap.md) for the full roadmap.
+See [`docs/03_Roadmap.md`](docs/03_Roadmap.md) for the full roadmap.
 
 ---
 
