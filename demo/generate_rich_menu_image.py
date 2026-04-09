@@ -1,5 +1,5 @@
 """
-Generate a 2-button LINE Rich Menu image (2500x843) for ATE Sales Report Bot.
+Generate a 3-button LINE Rich Menu image (2500x843) for ATE Sales Report Bot.
 
 Usage:
   python3 generate_rich_menu_image.py

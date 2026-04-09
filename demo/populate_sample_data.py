@@ -554,7 +554,7 @@ legend_rows = [
     ["Follow-up Notes", "R", "text", "Internal notes"],
     ["Summary (EN)", "S", "text", "AI-generated English summary"],
     ["Raw Message", "T", "text", "Original LINE message"],
-    ["Batch ID", "U", "MSG-XXXXX", "Groups multi-activity messages"],
+    ["Batch ID", "U", "MSG-XXXXXXXX", "Groups multi-activity messages"],
     ["Item #", "V", "1/3, 2/3", "Item within a batch"],
     ["Source", "W", "live/sample", "Bot entry vs generated data"],
     ["Manager Notes", "X", "text", "Manual entry only"],

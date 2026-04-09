@@ -30,7 +30,7 @@ LINE Message → Vercel Serverless → Gemini AI Parse → Google Sheets → LIN
 | Database | Google Sheets (via gspread) | Multi-tab data storage |
 | Dashboard | Looker Studio | KPIs, pipeline chart, segment mix |
 | Cron | GitHub Actions | Weekly stale deal notifications |
-| Rich Menu | LINE Rich Menu API | 4-button navigation |
+| Rich Menu | LINE Rich Menu API | 3-button navigation |
 
 **Dependencies** (`requirements.txt`):
 - `gspread==6.1.4` — Google Sheets client
