@@ -153,6 +153,7 @@ Reminders:
 
 Current:
 
+- [docs/README.md](/Users/openclaw/ate-sales-report-demo/docs/README.md) — current vs legacy doc index
 - [db/README.md](/Users/openclaw/ate-sales-report-demo/db/README.md) — SQL schema foundation
 - [docs/08_Telegram_Postgres_Runbook.md](/Users/openclaw/ate-sales-report-demo/docs/08_Telegram_Postgres_Runbook.md) — current bring-up and operations runbook
 

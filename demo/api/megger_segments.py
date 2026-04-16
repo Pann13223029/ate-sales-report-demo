@@ -2,6 +2,9 @@
 Product Segment Lookup
 431 products mapped to 7 segments from ATE's product catalog.
 Auto-matches product names typed by sales reps to their segment code.
+
+Legacy note:
+Originally used by the older LINE/Python demo path. Still useful as catalog reference.
 """
 
 import re

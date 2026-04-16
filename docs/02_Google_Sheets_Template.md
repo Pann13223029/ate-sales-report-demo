@@ -1,5 +1,10 @@
 # ATE Sales Report — Google Sheets Structure
 
+> Legacy note:
+> This document describes the older demo-era Google Sheets design.
+> The current rebuild still uses Google workbooks, but under a different `Telegram + Postgres + TypeScript` architecture and contract.
+> Start from [../README.md](../README.md) and [08_Telegram_Postgres_Runbook.md](./08_Telegram_Postgres_Runbook.md) for the current path.
+
 > **Purpose:** Flat 24-column Google Sheets workbook serving as database and Looker Studio data source.
 > **Design:** Single-table structure with dual-write (Sheet1 for demo + Live Data for permanence).
 > **Date:** 2026-03-14

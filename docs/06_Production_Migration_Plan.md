@@ -1,5 +1,9 @@
 # ATE Sales Report Bot — Production Migration Plan
 
+> Legacy note:
+> This migration plan was written for the older `LINE + Python + Google Sheets` productionization track.
+> It is kept for historical context, but it is not the active implementation plan for the current rebuild.
+
 > **Document Version:** 1.0
 > **Date:** 2026-04-02
 > **Prepared by:** Engineering Team (synthesized from 6-expert panel review)

@@ -1,6 +1,9 @@
 """
 ATE Sales Report Demo — Vercel Serverless Function
 Receives LINE webhook → Gemini AI parses Thai message → Google Sheets → LINE reply
+
+Legacy note:
+This file belongs to the older LINE/Python demo path retained for reference.
 """
 
 import os

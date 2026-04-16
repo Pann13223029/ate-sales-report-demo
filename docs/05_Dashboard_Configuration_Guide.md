@@ -1,5 +1,9 @@
 # ATE Sales Report System — Looker Studio Dashboard Configuration Guide
 
+> Legacy note:
+> This dashboard guide belongs to the older demo path and its sheet/dashboard assumptions.
+> The active rebuild currently uses operational and executive Google workbooks generated from Postgres projections.
+
 > **Created:** 2026-03-15
 > **Data Source:** Google Sheets → "Combined" tab (24 columns, A-X)
 > **Current Dashboard:** [Looker Studio Link](https://lookerstudio.google.com/reporting/9a4b326f-4f51-4f85-be2f-2bf8e958a9ec)

@@ -6,6 +6,9 @@ Trigger: External cron (GitHub Actions) every Monday
 Logic: Scan Combined sheet for deals with no update in 7+ days, push to each rep via LINE.
 
 Security: Requires X-Cron-Secret header matching CRON_SECRET env var.
+
+Legacy note:
+This file belongs to the older LINE/Python demo path retained for reference.
 """
 
 import os

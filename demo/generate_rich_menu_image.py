@@ -4,6 +4,9 @@ Generate a 3-button LINE Rich Menu image (2500x843) for ATE Sales Report Bot.
 Usage:
   python3 generate_rich_menu_image.py
   → Outputs: rich_menu.png
+
+Legacy note:
+This script belongs to the older LINE/Python demo path retained for reference.
 """
 
 from PIL import Image, ImageDraw, ImageFont

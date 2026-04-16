@@ -3,6 +3,9 @@ Populate Google Sheets with sample data for the ATE Sales Demo.
 
 Usage:
   python populate_sample_data.py
+
+Legacy note:
+This script belongs to the older LINE/Python demo path retained for reference.
 """
 
 import json

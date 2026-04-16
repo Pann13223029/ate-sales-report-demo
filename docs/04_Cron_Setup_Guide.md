@@ -1,5 +1,9 @@
 # ATE Sales Report System — Stale Deal Cron Setup Guide
 
+> Legacy note:
+> This guide documents the old `LINE + Vercel + /api/stale-check` cron path.
+> The current rebuild uses Postgres-backed jobs and the scheduler described in [08_Telegram_Postgres_Runbook.md](./08_Telegram_Postgres_Runbook.md).
+
 > **Created:** 2026-03-15
 > **For:** Weekly stale deal push notifications via `/api/stale-check`
 

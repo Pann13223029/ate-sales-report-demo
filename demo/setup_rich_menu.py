@@ -8,6 +8,9 @@ Requires:
   - LINE_CHANNEL_ACCESS_TOKEN in .env or environment
   - rich_menu.png in same directory
   - Google Sheets URL or GOOGLE_SHEETS_ID
+
+Legacy note:
+This script belongs to the older LINE/Python demo path retained for reference.
 """
 
 import os

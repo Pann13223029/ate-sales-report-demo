@@ -1,5 +1,10 @@
 # LINE Official Account & Messaging API Setup Guide
 
+> Legacy note:
+> This guide belongs to the older `LINE + Python + Google Sheets` demo path.
+> It is retained for reference only. The active rebuild uses `Telegram + Postgres + TypeScript`.
+> Start from [../README.md](../README.md) and [08_Telegram_Postgres_Runbook.md](./08_Telegram_Postgres_Runbook.md) for the current system.
+
 **Company:** ATE (Advanced Technology Equipment)
 **Purpose:** Receive messages from a LINE group via webhook (Vercel serverless integration)
 **Date:** 2026-03-10

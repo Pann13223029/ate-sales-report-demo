@@ -1,5 +1,9 @@
 # ATE Sales Report System — Roadmap
 
+> Legacy note:
+> This roadmap tracks the older demo evolution and is no longer the canonical execution plan.
+> The active implementation path is the `Telegram + Postgres + TypeScript` rebuild at the repo root.
+
 > **Last updated:** 2026-03-31
 
 ---

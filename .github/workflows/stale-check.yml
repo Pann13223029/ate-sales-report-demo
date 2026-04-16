@@ -1,15 +1,16 @@
-name: Weekly Stale Deal Check
+name: Legacy Weekly Stale Deal Check
 
 on:
-  schedule:
-    # Every Monday at 8:00 AM Bangkok time (1:00 AM UTC)
-    - cron: '0 1 * * 1'
-  workflow_dispatch: # Allow manual trigger for testing
+  workflow_dispatch:
 
 jobs:
   stale-check:
     runs-on: ubuntu-latest
     steps:
+      - name: Legacy workflow notice
+        run: |
+          echo "This workflow belongs to the older LINE/Python demo path."
+          echo "It is kept for reference and manual use only."
       - name: Trigger stale deal check
         run: |
           curl -s -f -X GET \

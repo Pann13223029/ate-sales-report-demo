@@ -1,2 +1,3 @@
+# Legacy note: these Python dependencies belong to the older LINE/Python demo path.
 gspread==6.1.4
 google-auth==2.38.0

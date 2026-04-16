@@ -1,5 +1,9 @@
 # ATE Sales Report System — PDPA Compliance Package
 
+> Legacy note:
+> This compliance package was drafted against the older `LINE + Python + Google Sheets` system shape.
+> It should be treated as reference material and re-reviewed against the current `Telegram + Postgres + TypeScript` architecture before operational use.
+
 > **Version:** 1.2 | **Date:** April 5, 2026 | **Classification:** Confidential
 > **Data Controller:** Advanced Technology Equipment Co., Ltd. (ATE)
 > **Legal Framework:** PDPA B.E. 2562 (2019)
