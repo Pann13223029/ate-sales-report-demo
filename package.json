@@ -1,0 +1,30 @@
+{
+  "name": "ate-sales-report-demo",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "db:migrate": "tsx src/db/migrate.ts",
+    "serve": "tsx src/server.ts",
+    "telegram:webhook": "tsx src/tools/telegram-webhook.ts",
+    "test": "tsx --test src/**/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "worker:enqueue-daily-reminders": "tsx src/workers/enqueue-daily-reminders.ts",
+    "worker:drain-jobs": "tsx src/workers/drain-jobs.ts",
+    "worker:process-webhooks": "tsx src/workers/process-webhooks.ts",
+    "worker:run-scheduler": "tsx src/workers/run-scheduler.ts",
+    "worker:send-telegram-messages": "tsx src/workers/send-telegram-messages.ts"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^0.10.4",
+    "kysely": "^0.28.2",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  }
+}

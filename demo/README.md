@@ -1,5 +1,10 @@
 # ATE Sales Report Demo
 
+> Legacy note:
+> This is the older `LINE + Python + Google Sheets` demo.
+> The active rebuild now lives at the repo root under `src/` and `db/` as a `Telegram + Postgres + TypeScript` system.
+> Use [../README.md](../README.md) and [../docs/08_Telegram_Postgres_Runbook.md](../docs/08_Telegram_Postgres_Runbook.md) for the current setup path.
+
 Free, zero-budget demo: LINE message → AI parses Thai → Google Sheets → Looker Studio Dashboard
 
 ## Architecture

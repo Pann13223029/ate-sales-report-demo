@@ -1,280 +1,173 @@
-![Zero Budget](https://img.shields.io/badge/cost-%240%2Fmonth-brightgreen)
-![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue)
-![Deployed on Vercel](https://img.shields.io/badge/deployed-Vercel-black)
-![Gemini 2.5 Flash](https://img.shields.io/badge/AI-Gemini%202.5%20Flash-4285F4)
-
 # ATE Sales Report System
 
-AI-powered sales reporting for Thai B2B field teams — LINE chat in, structured data out, live dashboard updated.
+This repository now contains **two different system tracks**:
 
-A production sales reporting system built for [ATE (Advanced Technology Equipment Co., Ltd.)](https://www.ate.co.th), a Thai B2B distributor of industrial equipment (Megger, Fluke, CRC, Salisbury, SmartWasher, IK Sprayer, HVOP). Field sales reps send natural Thai text in LINE chat; Gemini AI parses it into structured data across 24 columns; data writes to Google Sheets across 4 tabs; a Looker Studio dashboard updates automatically. Every component runs on free tiers — total recurring cost: **$0/month**.
+- `current path`: a `Telegram + Postgres + Google Sheets + TypeScript` rebuild under [src](/Users/openclaw/ate-sales-report-demo/src) and [db](/Users/openclaw/ate-sales-report-demo/db)
+- `legacy path`: the older `LINE + Python + Google Sheets` demo under [demo](/Users/openclaw/ate-sales-report-demo/demo)
 
----
+The current engineering work is happening on the **Telegram/Postgres rebuild**. The legacy demo is retained for reference only.
 
-## Architecture
+## Repo Status
+
+The new stack already includes:
+
+- SQL-first Postgres schema and migrations
+- typed Kysely/Neon data layer
+- durable Telegram webhook inbox and async job queue
+- Gemini-first parsing with heuristic fallback
+- draft, confirm, create, update, and `/mydeals` flows
+- daily stale reminders at `08:30 Asia/Bangkok`
+- operational and executive Google workbook export jobs
+- operational sheet sync-back and incident surfacing
+- core tests and typecheck coverage
+
+What is **not** fully done yet:
+
+- live environment bring-up in this workspace
+- final deployment packaging for production hosting
+- full repo-wide migration of every old `demo/` asset into the new stack
+
+## Current Architecture
 
 ```mermaid
 flowchart LR
-    LINE["📱 LINE Chat<br/>(Sales Rep)"] --> Vercel["⚡ Vercel<br/>Python Serverless"]
-    Vercel --> Gemini["🤖 Gemini 2.5 Flash<br/>(Primary AI)"]
-    Vercel -.->|fallback| Groq["🤖 Groq Llama 3.3 70B"]
-    Vercel --> Sheets["📊 Google Sheets<br/>(4 tabs)"]
-    Vercel --> Reply["💬 LINE Reply<br/>(Confirmation + Nudge)"]
-    Sheets --> Dashboard["📈 Looker Studio<br/>Dashboard"]
-    Cron["⏰ GitHub Actions<br/>(Weekly Cron)"] --> StaleCheck["🔔 Stale Deal<br/>Push Notification"]
-    StaleCheck --> LINE
+    TG["Telegram Bot"] --> HTTP["Node HTTP Server"]
+    HTTP --> INBOX["ops.telegram_webhook_inbox"]
+    INBOX --> JOBS["ops.jobs"]
+    JOBS --> PARSE["Gemini / fallback parser"]
+    PARSE --> EVENTS["events.business_events"]
+    EVENTS --> CURR["projections.opportunities_current"]
+    CURR --> OPWB["Operational Workbook"]
+    CURR --> EXWB["Executive Workbook"]
+    JOBS --> REM["Daily Reminder Jobs"]
 ```
 
-> LINE message → Vercel Python → Gemini AI parse → Google Sheets (4 tabs) → LINE confirmation reply → Looker Studio dashboard
+Main contract:
 
-See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the full 15-section architecture document.
+- `events.business_events` is the append-only business history
+- `projections.opportunities_current` is the authoritative current-state read model
+- workbook sync, reminders, Telegram send, and sheet reconciliation run through `ops.jobs`
 
----
+## Repo Layout
 
-## How It Works
-
-**Sales rep sends a Thai message in LINE:**
-```
-ไปเยี่ยม PTT คุณวีระ 081-234-5678 เสนอ Megger MTO330 ราคา 150,000 สถานะเจรจา
-```
-
-**Bot replies with structured confirmation:**
-```
-รับทราบครับ บันทึกแล้ว:
-- เข้าพบลูกค้า: PTT
-- ผู้ติดต่อ: คุณวีระ (081-234-5678)
-- สินค้า: Megger MTO330
-- มูลค่า: ฿150,000
-- สถานะ: เจรจา
-📋 Batch ID: MSG-A1B2C3D4
+```text
+ate-sales-report-demo/
+├── src/                    # Current TypeScript application
+├── db/                     # Current SQL-first schema and migrations
+├── docs/08_Telegram_Postgres_Runbook.md
+├── demo/                   # Legacy LINE/Python demo
+├── ARCHITECTURE.md         # Legacy architecture doc with warning banner
+├── package.json            # Current Node scripts
+├── .env.example            # Current env template
+├── requirements.txt        # Legacy Python demo deps
+└── vercel.json             # Legacy Vercel routing for demo/api/*
 ```
 
-The data is simultaneously written to 4 Google Sheets tabs and the dashboard updates in real time.
+Important note:
 
-<details>
-<summary>Parsed JSON structure (what gets written to Sheets)</summary>
+- [vercel.json](/Users/openclaw/ate-sales-report-demo/vercel.json) still points to the legacy Python demo.
+- The new TypeScript server is started with `npm run serve`; it is not yet wired to the old Vercel config.
 
-```json
-{
-  "is_sales_report": true,
-  "activities": [{
-    "customer_name": "PTT",
-    "contact_person": "คุณวีระ",
-    "contact_channel": "081-234-5678",
-    "product_name": "Megger MTO330",
-    "deal_value_thb": 150000,
-    "activity_type": "visit",
-    "sales_stage": "negotiation",
-    "batch_id": "MSG-A1B2C3D4"
-  }]
-}
-```
-</details>
+## Quick Start
 
-### Other Interactions
+Prerequisites:
 
-| Command | What It Does |
-|---------|-------------|
-| `อัพเดท MSG-A1B2C3D4 สถานะปิดได้ วางมัดจำ 50%` | Update existing deal — AI parses only changed fields, with Groq fallback |
-| `สรุป` | AI-generated Thai pipeline summary with stats |
-| Weekly push (automatic) | Stale deal reminders for deals with no update in 7+ days |
+- `Node.js >= 20`
+- PostgreSQL / Neon database
+- Telegram bot token
+- optional Gemini API key
+- optional Google service account + workbook IDs
 
----
-
-## Features
-
-| | Feature | Description |
-|---|---------|-------------|
-| 🤖 | **Thai NLP Parsing** | Mixed Thai/English, Thai currency slang (แสนห้า, 1.5ล้าน), Thai dates (อังคารหน้า) |
-| 🤖 | **Dual AI Failover** | Gemini 2.5 Flash primary, Groq Llama 3.3 70B automatic fallback |
-| 🤖 | **Few-Shot Prompting** | 8 curated examples covering visits, closures, losses, service, bidding |
-| 📊 | **24-Column Schema** | Full activity lifecycle from lead to close, including training and close reasons |
-| 📊 | **Product Segment Auto-Match** | 431 Megger products → 7 segments (CI, GET, LVI, MRM, PDIX, PP, PT) |
-| 📊 | **Multi-Sheet Write** | Every report → Combined + Live Data |
-| 📊 | **Smart Match** | Detects existing active deals with same customer+product, suggests batch IDs |
-| 📊 | **Update System** | Modify existing deals via `อัพเดท MSG-XXXXXXXX` — AI parses only changes, with Groq fallback |
-| 💬 | **Hard Validation** | Reports without phone/email are rejected before saving |
-| 💬 | **3-Tier Nudge** | Polite Thai hints for missing fields (0=none, 1-2=hint, 3+=hint+example) |
-| 💬 | **Rich Menu** | 3-button LINE interface (How to Report, How to Update, Open Sheets) — dashboard access restricted to management |
-| 🔒 | **Formula Injection Protection** | All cell values sanitized before writing to prevent spreadsheet formula attacks |
-| 🔒 | **Webhook Hardening** | 1MB body size limit, 2000-char message guard, event deduplication, timing-safe auth |
-| 🔒 | **AI Output Validation** | Parsed activity_type and sales_stage validated against known enums before writing |
-| ⚙️ | **Stale Deal Cron** | GitHub Actions weekly push — reps notified of 7+ day old deals |
-| ⚙️ | **Zero SDK Design** | Only 2 pip dependencies (gspread, google-auth); all APIs via urllib |
-
----
-
-## Tech Stack
-
-| Layer | Technology | Role | Cost |
-|-------|-----------|------|------|
-| Chat Interface | LINE Messaging API | Sales rep input + bot replies | Free |
-| Serverless Runtime | Vercel Python | Webhook handler + API endpoints | Free (Hobby) |
-| Primary AI | Google Gemini 2.5 Flash | Thai NLP → structured JSON | Free tier |
-| Fallback AI | Groq Llama 3.3 70B | Automatic failover | Free tier |
-| Database | Google Sheets (gspread) | Multi-tab structured storage | Free |
-| Dashboard | Looker Studio | KPIs, pipeline, segment mix | Free |
-| Cron | GitHub Actions | Weekly stale deal check | Free |
-
-> **Total recurring cost: $0/month**
-
----
-
-## Rich Menu
-
-![LINE Rich Menu](demo/rich_menu.png)
-
-3-button persistent menu in LINE with bilingual Thai/English labels:
-- **วิธีรายงาน** (How to Report) — shows reporting guide with examples
-- **วิธีอัพเดท** (How to Update) — shows update command syntax
-- **เปิด Sheets** (Google Sheets) — opens the spreadsheet directly
-
-> **Note:** Dashboard access is restricted to management only and not exposed through the Rich Menu.
-
----
-
-## Key Design Decisions
-
-| Decision | Approach | Rationale |
-|----------|----------|-----------|
-| **Product segment** | 431-product lookup dict in `megger_segments.py` — code-only, not AI | Deterministic matching is 100% reliable; no added AI latency or token cost |
-| **HTTP client** | `urllib.request` for LINE, Gemini, Groq — no SDKs | Eliminates version conflicts on Vercel's Python runtime; only 2 pip deps total |
-| **Database** | Google Sheets via gspread | Free, familiar to sales managers, sufficient for 6-8 reps; would migrate to PostgreSQL at scale |
-| **AI failover** | Gemini primary, Groq secondary (for both reports and updates) | Gemini has superior Thai parsing; Groq provides sub-second fallback if Gemini is down |
-| **Lazy imports** | gspread/google-auth imported inside functions | Vercel's Python runtime fails on module-level imports of these libraries |
-| **Multi-tab writes** | Every report → 2 sheets | Combined (dashboard) + Live Data (permanent audit), with failure logging |
-| **Security by default** | Formula injection protection, timing-safe auth, sanitized errors | Defense in depth — no user input reaches sheets or HTTP responses unsanitized |
-
----
-
-## Project Structure
-
-```
-ate_sales_report_system_planning/
-├── README.md                        ← You are here
-├── ARCHITECTURE.md                  # Full 15-section system architecture
-├── vercel.json                      # Build config (points to demo/api/)
-├── requirements.txt                 # gspread + google-auth
-├── .github/
-│   └── workflows/
-│       └── stale-check.yml          # Weekly cron trigger
-├── demo/
-│   ├── api/
-│   │   ├── webhook.py               # Main serverless function (1,400+ lines)
-│   │   ├── stale_check.py           # Stale deal endpoint (270 lines)
-│   │   └── megger_segments.py       # 431-product → 7-segment lookup
-│   ├── populate_sample_data.py      # Sample data + sheet formatting
-│   ├── generate_rich_menu_image.py  # Rich menu PNG generator
-│   ├── setup_rich_menu.py           # Rich menu LINE API setup
-│   ├── requirements.txt             # Python dependencies
-│   └── README.md                    # Detailed deployment guide
-└── docs/                            # Setup guides & planning docs
-    └── archive/                     # Superseded docs
-```
-
----
-
-## Getting Started
-
-### Prerequisites
-
-- Python 3.9+
-- [Vercel](https://vercel.com) account (free Hobby plan)
-- [LINE Developer](https://developers.line.biz) account (free)
-- Google Cloud project with Sheets API enabled
-- [Gemini API key](https://aistudio.google.com/apikey) (free)
-- [Groq API key](https://console.groq.com) (optional, for fallback)
-
-### Environment Variables
-
-| Variable | Purpose |
-|----------|---------|
-| `LINE_CHANNEL_SECRET` | Webhook signature validation |
-| `LINE_CHANNEL_ACCESS_TOKEN` | LINE API authentication |
-| `GEMINI_API_KEY` | Gemini AI API key |
-| `GROQ_API_KEY` | Groq fallback API key (optional) |
-| `GOOGLE_SHEETS_ID` | Target spreadsheet ID |
-| `GOOGLE_SERVICE_ACCOUNT_JSON` | Service account credentials (full JSON) |
-| `CRON_SECRET` | Stale check endpoint auth |
-
-### Quick Start
+Setup:
 
 ```bash
-# 1. Clone
-git clone https://github.com/Pann13223029/ate-sales-report-demo.git
-cd ate-sales-report-demo
-
-# 2. Set environment variables on Vercel
-vercel env add LINE_CHANNEL_SECRET
-vercel env add LINE_CHANNEL_ACCESS_TOKEN
-vercel env add GEMINI_API_KEY
-vercel env add GOOGLE_SHEETS_ID
-vercel env add GOOGLE_SERVICE_ACCOUNT_JSON
-vercel env add CRON_SECRET
-
-# 3. Deploy
-vercel --prod
-
-# 4. Verify
-curl https://your-project.vercel.app/api/webhook
-# → {"status": "ok", "service": "ATE Sales Report Bot", ...}
-
-# 5. Set LINE webhook URL to: https://your-project.vercel.app/api/webhook
+npm install
+cp .env.example .env
+npm run db:migrate
+npm run typecheck
+npm test
+npm run serve
 ```
 
-For detailed step-by-step setup (API keys, Google Sheets, LINE, Looker Studio), see [`demo/README.md`](demo/README.md).
+The local server exposes:
 
----
+- `GET /healthz`
+- `POST /telegram/webhook`
 
-<details>
-<summary><strong>Data Model (24 columns, A–X)</strong></summary>
+The same runtime also:
 
+- drains async jobs
+- runs the reminder scheduler
+- can enqueue operational sheet reconciliation jobs
+
+## Key Scripts
+
+```bash
+npm run db:migrate
+npm run serve
+npm run telegram:webhook info
+npm run telegram:webhook set https://your-public-host
+npm run worker:drain-jobs
+npm run worker:run-scheduler
+npm run worker:enqueue-daily-reminders
+npm run typecheck
+npm test
 ```
-A: Timestamp           J: Activity Type       R: Follow-up Notes
-B: Rep Name            K: Sales Stage         S: Summary (EN)
-C: Customer            L: Payment Status      T: Raw Message
-D: Contact Person      M: Planned Visit Date  U: Batch ID
-E: Contact Channel     N: Bidding Date        V: Item #
-F: Product Name        O: Accompanying Rep    W: Source (live/sample)
-G: Product Segment     P: Training Flag       X: Manager Notes
-H: Quantity            Q: Close Reason
-I: Deal Value (THB)
-```
 
-**Key enums:** 8 activity types · 10 sales stages · 7 Megger product segments
+## Environment
 
-See [ARCHITECTURE.md § Data Model](ARCHITECTURE.md#4-data-model) for full schema with types and enums.
+See [.env.example](/Users/openclaw/ate-sales-report-demo/.env.example) for the full template.
 
-</details>
+Core:
 
----
+- `DATABASE_URL`
+- `PORT`
+- `JOB_POLL_INTERVAL_MS`
 
-## Documentation
+Telegram:
 
-| Document | Contents |
-|----------|----------|
-| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Full system architecture — data model, AI pipeline, validation, error handling |
-| [`demo/README.md`](demo/README.md) | Detailed deployment guide with step-by-step setup |
-| [`docs/01_LINE_Setup_Guide.md`](docs/01_LINE_Setup_Guide.md) | LINE Developer Console setup |
-| [`docs/02_Google_Sheets_Template.md`](docs/02_Google_Sheets_Template.md) | Sheets template and column reference |
-| [`docs/03_Roadmap.md`](docs/03_Roadmap.md) | Feature roadmap and decision log |
-| [`docs/04_Cron_Setup_Guide.md`](docs/04_Cron_Setup_Guide.md) | Stale deal cron configuration |
-| [`docs/05_Dashboard_Configuration_Guide.md`](docs/05_Dashboard_Configuration_Guide.md) | Looker Studio dashboard setup |
-| [`docs/06_Production_Migration_Plan.md`](docs/06_Production_Migration_Plan.md) | Production deployment plan |
-| [`docs/07_PDPA_Compliance_Package.md`](docs/07_PDPA_Compliance_Package.md) | PDPA compliance documentation |
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_WEBHOOK_SECRET`
+- `PUBLIC_WEBHOOK_URL`
 
----
+Gemini:
 
-## Roadmap
+- `GEMINI_API_KEY`
+- `GEMINI_MODEL`
 
-- [x] Security & reliability hardening (formula injection, timing-safe auth, event dedup, AI validation)
-- Photo/receipt OCR via Gemini Vision
-- Monthly auto-summary cron push to management
-- Competitor tracking from lost-deal close reasons
-- Pipeline revenue forecasting
+Google workbooks:
 
-See [`docs/03_Roadmap.md`](docs/03_Roadmap.md) for the full roadmap.
+- `GOOGLE_SERVICE_ACCOUNT_JSON`
+- `OPERATIONAL_WORKBOOK_ID`
+- `EXECUTIVE_WORKBOOK_ID`
+- `SHEET_SYNC_ACTOR_USER_ID`
+- `SHEET_SYNC_INTERVAL_MINUTES`
 
----
+Reminders:
 
-Built for **ATE (Advanced Technology Equipment Co., Ltd.)**
+- `REMINDER_TIMEZONE`
+- `REMINDER_DAILY_HOUR`
+- `REMINDER_DAILY_MINUTE`
+
+## Docs
+
+Current:
+
+- [db/README.md](/Users/openclaw/ate-sales-report-demo/db/README.md) — SQL schema foundation
+- [docs/08_Telegram_Postgres_Runbook.md](/Users/openclaw/ate-sales-report-demo/docs/08_Telegram_Postgres_Runbook.md) — current bring-up and operations runbook
+
+Legacy:
+
+- [demo/README.md](/Users/openclaw/ate-sales-report-demo/demo/README.md) — old LINE/Python demo
+- [ARCHITECTURE.md](/Users/openclaw/ate-sales-report-demo/ARCHITECTURE.md) — old demo architecture
+- [docs/01_LINE_Setup_Guide.md](/Users/openclaw/ate-sales-report-demo/docs/01_LINE_Setup_Guide.md) through [docs/07_PDPA_Compliance_Package.md](/Users/openclaw/ate-sales-report-demo/docs/07_PDPA_Compliance_Package.md) — mostly demo-era documentation
+
+## Recommended Next Step
+
+The repo is now clear enough to operate the new path. The next practical step is:
+
+1. set real env vars
+2. run `npm run db:migrate`
+3. run `npm run serve`
+4. register the Telegram webhook
+5. exercise one create flow, one update flow, one reminder flow, and one manager sheet correction end to end

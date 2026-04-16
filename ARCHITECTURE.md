@@ -1,5 +1,10 @@
 # ATE Sales Report System — Architecture
 
+> Legacy note:
+> This document describes the older `LINE + Python + Google Sheets` demo architecture.
+> It is retained for reference, but it is **not** the canonical architecture for the current `Telegram + Postgres + TypeScript` rebuild in `src/` and `db/`.
+> For the current system surface, start from [README.md](/Users/openclaw/ate-sales-report-demo/README.md), [db/README.md](/Users/openclaw/ate-sales-report-demo/db/README.md), and [docs/08_Telegram_Postgres_Runbook.md](/Users/openclaw/ate-sales-report-demo/docs/08_Telegram_Postgres_Runbook.md).
+
 ## 1. System Overview
 
 A zero-budget AI-powered sales reporting system for ATE (Advanced Technology Equipment Co., Ltd.), a Thai B2B distributor of industrial equipment. Field sales reps report activities via LINE chat in natural Thai — the system parses, validates, stores, and visualizes the data automatically.

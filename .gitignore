@@ -1,9 +1,12 @@
 .DS_Store
 .env
 *.json
+!package.json
+!tsconfig.json
 !vercel.json
 !demo/vercel.json
 !demo/package.json
 __pycache__/
 .vercel/
 node_modules/
+dist/
