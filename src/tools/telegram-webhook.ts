@@ -51,15 +51,19 @@ async function main(): Promise<void> {
 export function buildWebhookUrl(rawBaseUrl: string): string {
   const url = new URL(rawBaseUrl);
 
-  if (url.pathname === '/' || url.pathname.length === 0) {
-    url.pathname = '/telegram/webhook';
+  if (
+    url.pathname.endsWith('/telegram/webhook') ||
+    url.pathname.endsWith('/api/telegram/webhook')
+  ) {
     return url.toString();
   }
 
-  if (!url.pathname.endsWith('/telegram/webhook')) {
-    url.pathname = `${url.pathname.replace(/\/$/, '')}/telegram/webhook`;
+  if (url.pathname === '/' || url.pathname.length === 0) {
+    url.pathname = '/api/telegram/webhook';
+    return url.toString();
   }
 
+  url.pathname = `${url.pathname.replace(/\/$/, '')}/api/telegram/webhook`;
   return url.toString();
 }
 

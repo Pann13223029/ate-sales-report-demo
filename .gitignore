@@ -2,6 +2,7 @@
 .env
 *.json
 !package.json
+!package-lock.json
 !tsconfig.json
 !vercel.json
 !demo/vercel.json

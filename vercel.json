@@ -1,25 +1,3 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "demo/api/webhook.py",
-      "use": "@vercel/python",
-      "config": { "maxLambdaSize": "15mb" }
-    },
-    {
-      "src": "demo/api/stale_check.py",
-      "use": "@vercel/python",
-      "config": { "maxLambdaSize": "15mb" }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/webhook",
-      "dest": "demo/api/webhook.py"
-    },
-    {
-      "src": "/api/stale-check",
-      "dest": "demo/api/stale_check.py"
-    }
-  ]
+  "$schema": "https://openapi.vercel.sh/vercel.json"
 }

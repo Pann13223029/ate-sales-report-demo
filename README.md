@@ -52,6 +52,7 @@ Main contract:
 
 ```text
 ate-sales-report-demo/
+├── api/                    # Current Vercel function entrypoints
 ├── src/                    # Current TypeScript application
 ├── db/                     # Current SQL-first schema and migrations
 ├── docs/08_Telegram_Postgres_Runbook.md
@@ -60,13 +61,14 @@ ate-sales-report-demo/
 ├── package.json            # Current Node scripts
 ├── .env.example            # Current env template
 ├── requirements.txt        # Legacy Python demo deps
-└── vercel.json             # Legacy Vercel routing for demo/api/*
+└── vercel.json             # Current root Vercel config
 ```
 
-Important note:
+Deployment note:
 
-- [vercel.json](/Users/openclaw/ate-sales-report-demo/vercel.json) still points to the legacy Python demo.
-- The new TypeScript server is started with `npm run serve`; it is not yet wired to the old Vercel config.
+- the repo root now exposes current Vercel Functions under [api](/Users/openclaw/ate-sales-report-demo/api)
+- the older Python Vercel config remains preserved in [demo/vercel.json](/Users/openclaw/ate-sales-report-demo/demo/vercel.json)
+- `npm run serve` is still the simplest local runtime because it keeps scheduler and job-drain loops alive continuously
 
 ## Quick Start
 
@@ -92,13 +94,23 @@ npm run serve
 The local server exposes:
 
 - `GET /healthz`
+- `GET /api/healthz`
 - `POST /telegram/webhook`
+- `POST /api/telegram/webhook`
+- `GET /api/cron` with cron authorization
 
 The same runtime also:
 
 - drains async jobs
 - runs the reminder scheduler
 - can enqueue operational sheet reconciliation jobs
+- matches the root Vercel `/api/cron` tick model, which now runs every `5 minutes`
+
+Hosted root Vercel functions expose:
+
+- `GET /api/healthz`
+- `POST /api/telegram/webhook`
+- `GET /api/cron`
 
 ## Key Scripts
 
@@ -108,6 +120,7 @@ npm run serve
 npm run telegram:webhook info
 npm run telegram:webhook set https://your-public-host
 npm run worker:drain-jobs
+npm run worker:run-runtime-tick
 npm run worker:run-scheduler
 npm run worker:enqueue-daily-reminders
 npm run typecheck
@@ -123,6 +136,8 @@ Core:
 - `DATABASE_URL`
 - `PORT`
 - `JOB_POLL_INTERVAL_MS`
+- `CRON_SECRET` preferred
+- `INTERNAL_API_SECRET` supported as an app-level fallback alias
 
 Telegram:
 
@@ -156,6 +171,14 @@ Current:
 - [docs/README.md](/Users/openclaw/ate-sales-report-demo/docs/README.md) — current vs legacy doc index
 - [db/README.md](/Users/openclaw/ate-sales-report-demo/db/README.md) — SQL schema foundation
 - [docs/08_Telegram_Postgres_Runbook.md](/Users/openclaw/ate-sales-report-demo/docs/08_Telegram_Postgres_Runbook.md) — current bring-up and operations runbook
+- [.github/workflows/runtime-tick.yml](/Users/openclaw/ate-sales-report-demo/.github/workflows/runtime-tick.yml) — current 5-minute runtime tick for hosted deployments
+
+Hosted GitHub configuration for the current path:
+
+- repository variable: `APP_BASE_URL`
+- repository secret: `CRON_SECRET`
+
+The runtime tick workflow skips cleanly until both are configured.
 
 Legacy:
 

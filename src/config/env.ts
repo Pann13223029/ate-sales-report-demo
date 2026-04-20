@@ -4,6 +4,8 @@ const appEnvSchema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
   TELEGRAM_WEBHOOK_SECRET: z.string().min(1).optional(),
+  CRON_SECRET: z.string().min(1).optional(),
+  INTERNAL_API_SECRET: z.string().min(1).optional(),
   PUBLIC_WEBHOOK_URL: z.string().url().optional(),
   GOOGLE_SERVICE_ACCOUNT_JSON: z.string().min(1).optional(),
   OPERATIONAL_WORKBOOK_ID: z.string().min(1).optional(),
@@ -24,6 +26,7 @@ export type AppEnv = Readonly<{
   databaseUrl: string;
   telegramBotToken: string | null;
   telegramWebhookSecret: string | null;
+  internalApiSecret: string | null;
   publicWebhookUrl: string | null;
   googleServiceAccountJson: string | null;
   operationalWorkbookId: string | null;
@@ -47,6 +50,7 @@ export function loadAppEnv(env: NodeJS.ProcessEnv = process.env): AppEnv {
     databaseUrl: parsed.DATABASE_URL,
     telegramBotToken: parsed.TELEGRAM_BOT_TOKEN ?? null,
     telegramWebhookSecret: parsed.TELEGRAM_WEBHOOK_SECRET ?? null,
+    internalApiSecret: parsed.INTERNAL_API_SECRET ?? parsed.CRON_SECRET ?? null,
     publicWebhookUrl: parsed.PUBLIC_WEBHOOK_URL ?? null,
     googleServiceAccountJson: parsed.GOOGLE_SERVICE_ACCOUNT_JSON ?? null,
     operationalWorkbookId: parsed.OPERATIONAL_WORKBOOK_ID ?? null,
