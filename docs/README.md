@@ -7,6 +7,7 @@ This repository now has **current** and **legacy** documentation tracks.
 - [../README.md](/Users/openclaw/ate-sales-report-demo/README.md) — repo entrypoint
 - [../db/README.md](/Users/openclaw/ate-sales-report-demo/db/README.md) — SQL/data contract
 - [08_Telegram_Postgres_Runbook.md](/Users/openclaw/ate-sales-report-demo/docs/08_Telegram_Postgres_Runbook.md) — current bring-up and operations runbook
+- [09_Pilot_Runbook.md](/Users/openclaw/ate-sales-report-demo/docs/09_Pilot_Runbook.md) — first live pilot operations and triage guide
 
 ## Legacy / Reference
 

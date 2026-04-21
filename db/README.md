@@ -20,6 +20,24 @@ The TypeScript migration runner reads these files directly:
 npm run db:migrate
 ```
 
+## Seed Template
+
+A starter pilot seed template is provided at:
+
+- [seeds/001_pilot_seed.template.sql](/Users/openclaw/ate-sales-report-demo/db/seeds/001_pilot_seed.template.sql)
+
+Recommended usage:
+
+1. copy it to a private local file such as `db/seeds/001_pilot_seed.local.sql`
+2. replace the placeholder UUIDs, names, emails, and Telegram user IDs
+3. run it against the same database used by `DATABASE_URL`
+
+This template covers:
+
+- admin, executive, and pilot rep users
+- initial product catalog rows
+- initial product aliases
+
 ## Design Intent
 
 - `core`: reference data and stable identities
